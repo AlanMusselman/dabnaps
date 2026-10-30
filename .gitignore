@@ -1,0 +1,13 @@
+﻿.venv/
+venv/
+node_modules/
+__pycache__/
+.ipynb_checkpoints/
+dist/
+build/
+.env
+.env.*
+.godaddy-ftp.json
+*.zip
+*.mp4
+*.mov
