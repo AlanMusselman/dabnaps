@@ -14,10 +14,11 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("status", "low-stock", "set-stock", "restock", "set-price", "update-rd", "add-product", "sync")]
+    [ValidateSet("status", "low-stock", "set-stock", "restock", "set-price", "update-rd", "add-product", "sync", "reconcile-batch")]
     [string]$Action = "status",
 
     [string]$Sku = "",
+    [string]$BatchId = "",
     [int]$Stock = 0,
     [int]$Delta = 0,
     [double]$Price = 0,
@@ -99,6 +100,21 @@ switch ($Action) {
         Write-Host ("Retail Valuation  : `${0:N2}" -f $TotalRetailValue) -ForegroundColor Green
         Write-Host ("Cost Valuation    : `${0:N2}" -f $TotalCostValue)
         Write-Host ("Low Stock Alerts  : {0}`n" -f $LowStockCount) -ForegroundColor ($(if ($LowStockCount -gt 0) { "Yellow" } else { "Green" }))
+
+        if ($Db.inHouseProductionBatches) {
+            Write-Host "=== IN-HOUSE PRODUCTION BATCHES ===" -ForegroundColor Cyan
+            $BatchTable = foreach ($b in $Db.inHouseProductionBatches) {
+                [PSCustomObject]@{
+                    BatchID = $b.batchId
+                    SKU     = $b.productSku
+                    Name    = $b.productName
+                    Passed  = ("{0}/{1}" -f $b.unitsPassedQC, $b.unitsPoured)
+                    Stage   = $b.stage
+                    Notes   = $b.notes
+                }
+            }
+            $BatchTable | Format-Table -AutoSize
+        }
     }
 
     "low-stock" {
@@ -189,5 +205,28 @@ switch ($Action) {
     "sync" {
         Save-Database -LogMessage ""
         Write-Host "[OK] Synced data\inventory.json to data\inventory-sync.js" -ForegroundColor Green
+    }
+
+    "reconcile-batch" {
+        $TargetBatchId = if ($BatchId) { $BatchId } elseif ($Sku) { $Sku } else { "BATCH-2026-10B" }
+        $Batch = $Db.inHouseProductionBatches | Where-Object { $_.batchId -eq $TargetBatchId }
+        if (-not $Batch) { Write-Error "Batch '$TargetBatchId' not found." }
+
+        $Item = $Db.products | Where-Object { $_.sku -eq $Batch.productSku }
+        if (-not $Item) { Write-Error "Product SKU '$($Batch.productSku)' not found." }
+
+        $OldStock = $Item.stock
+        $CuredUnits = $Batch.unitsPassedQC
+        $Item.stock = $OldStock + $CuredUnits
+        $Item.rdStage = "Stocked Inventory"
+        if ($Item.badge -eq "Low Stock") {
+            $Item.badge = "In-House Engineered"
+        }
+        $Batch.stage = "Completed & Stocked"
+        $Batch.notes = "$CuredUnits cured units reconciled into active stock."
+
+        $Msg = "Reconciled $($Batch.batchId): Added $CuredUnits units of $($Item.sku) to stock ($OldStock -> $($Item.stock)). Batch marked Completed & Stocked."
+        Save-Database -LogMessage $Msg
+        Write-Host "[OK] $Msg" -ForegroundColor Green
     }
 }

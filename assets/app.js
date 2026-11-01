@@ -34,17 +34,100 @@
     }
   };
 
-  async function loadDatabase() {
-    for (const endpoint of ['/api/inventory', 'api.php']) {
+  function getAdminPasscode() {
+    return sessionStorage.getItem('dabnaps_admin_passcode') || '';
+  }
+
+  function setAdminPasscode(passcode) {
+    if (passcode) {
+      sessionStorage.setItem('dabnaps_admin_passcode', passcode);
+    } else {
+      sessionStorage.removeItem('dabnaps_admin_passcode');
+    }
+  }
+
+  function promptAdminPasscode() {
+    return new Promise((resolve) => {
+      let modal = document.getElementById('admin-auth-modal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'admin-auth-modal';
+        modal.className = 'modal-backdrop';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10,10,10,0.85); display:none; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(6px);';
+        modal.innerHTML = `
+          <div class="modal-card" style="background:#1C1A17; border:1px solid #FFB800; border-radius:16px; padding:32px; max-width:420px; width:90%; color:#FFFDF7; text-align:center; box-shadow:0 16px 48px rgba(0,0,0,0.8);">
+            <div style="font-size:2.8rem; margin-bottom:12px;">🔒</div>
+            <h3 style="color:#FFB800; font-size:1.35rem; margin-bottom:8px; font-weight:700;">Admin Authentication</h3>
+            <p style="font-size:0.9rem; color:#E8B86D; line-height:1.4; margin-bottom:20px;">
+              Enter the Dabnaps administrative passcode to access wholesale COGS, production batches, and inventory management.
+            </p>
+            <form id="admin-auth-form" style="display:flex; flex-direction:column; gap:16px;">
+              <input type="password" id="admin-passcode-input" placeholder="Admin Passcode" autocomplete="current-password"
+                style="width:100%; box-sizing:border-box; padding:12px 16px; border-radius:8px; border:1px solid #8C5300; background:#0A0A0A; color:#FFFDF7; font-size:1rem; outline:none;" />
+              <div id="admin-auth-err" style="color:#EF4444; font-size:0.85rem; display:none;"></div>
+              <div style="display:flex; gap:12px; justify-content:center;">
+                <button type="button" id="admin-auth-cancel" class="btn-secondary" style="flex:1; padding:10px 16px;">Cancel</button>
+                <button type="submit" id="admin-auth-submit" class="btn-primary" style="flex:1; padding:10px 16px;">Unlock Portal</button>
+              </div>
+            </form>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+
+      const input = document.getElementById('admin-passcode-input');
+      const form = document.getElementById('admin-auth-form');
+      const cancelBtn = document.getElementById('admin-auth-cancel');
+      const errBox = document.getElementById('admin-auth-err');
+      errBox.style.display = 'none';
+      errBox.textContent = '';
+      input.value = '';
+      modal.style.display = 'flex';
+      setTimeout(() => input.focus(), 80);
+
+      const close = () => {
+        modal.style.display = 'none';
+        form.onsubmit = null;
+        cancelBtn.onclick = null;
+      };
+
+      cancelBtn.onclick = () => {
+        close();
+        resolve(null);
+      };
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const code = input.value.trim();
+        if (!code) {
+          errBox.textContent = 'Please enter a passcode.';
+          errBox.style.display = 'block';
+          return;
+        }
+        close();
+        resolve(code);
+      };
+    });
+  }
+
+  async function loadDatabase(preferredScope) {
+    const passcode = getAdminPasscode();
+    const headers = {};
+    if (passcode) {
+      headers['X-Admin-Passcode'] = passcode;
+      headers['Authorization'] = 'Bearer ' + passcode;
+    }
+    const query = (passcode || preferredScope === 'admin') ? '?scope=admin' : '';
+    for (const endpoint of ['/api/inventory' + query, 'api.php' + query]) {
       try {
-        const res = await fetch(endpoint, { cache: 'no-store' });
+        const res = await fetch(endpoint, { cache: 'no-store', headers });
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.products)) {
             db = data;
             serverOnline = true;
             updateSyncIndicator(true);
-            return;
+            return true;
           }
         }
       } catch (e) {
@@ -58,6 +141,7 @@
       } catch (e) {}
     }
     updateSyncIndicator(false);
+    return false;
   }
 
   async function persistDatabase(logAction) {
@@ -75,16 +159,27 @@
 
     localStorage.setItem('dabnaps_db_override', JSON.stringify(db));
 
+    const passcode = getAdminPasscode();
+    const reqHeaders = { 'Content-Type': 'application/json' };
+    if (passcode) {
+      reqHeaders['X-Admin-Passcode'] = passcode;
+      reqHeaders['Authorization'] = 'Bearer ' + passcode;
+    }
+
     let savedRemote = false;
     for (const endpoint of ['/api/inventory', 'api.php']) {
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: reqHeaders,
           body: JSON.stringify(db)
         });
         if (res.ok) {
           savedRemote = true;
+          break;
+        } else if (res.status === 401 || res.status === 403) {
+          showToast('Authentication failed: Write rejected by server.');
+          setAdminPasscode(null);
           break;
         }
       } catch (e) {}
@@ -105,7 +200,59 @@
   }
 
   // View Switching
-  window.switchView = function (viewName) {
+  window.switchView = async function (viewName) {
+    if (viewName === 'admin') {
+      let passcode = getAdminPasscode();
+      if (!passcode) {
+        passcode = await promptAdminPasscode();
+        if (!passcode) {
+          // User canceled
+          return;
+        }
+
+        // Verify passcode against server
+        let verified = false;
+        for (const endpoint of ['/api/inventory?scope=admin', 'api.php?scope=admin']) {
+          try {
+            const res = await fetch(endpoint, {
+              headers: {
+                'X-Admin-Passcode': passcode,
+                'Authorization': 'Bearer ' + passcode
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && Array.isArray(data.products)) {
+                db = data;
+                verified = true;
+                break;
+              }
+            } else if (res.status === 401 || res.status === 403) {
+              showToast('Access Denied: Invalid admin passcode.');
+              return;
+            }
+          } catch (e) {
+            // offline / standalone file mode fallback
+          }
+        }
+
+        if (!verified && !serverOnline && passcode === 'Dabnaps2026!') {
+          verified = true;
+        }
+
+        if (!verified) {
+          showToast('Access Denied: Invalid admin passcode.');
+          return;
+        }
+
+        setAdminPasscode(passcode);
+        showToast('Admin access granted. COGS & orders unlocked.');
+      } else {
+        // Refresh admin data
+        await loadDatabase('admin');
+      }
+    }
+
     activeView = viewName;
     document.querySelectorAll('.nav-tab').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.view === viewName);
@@ -115,6 +262,13 @@
     document.getElementById('view-admin').style.display = viewName === 'admin' ? 'block' : 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     renderAll();
+  };
+
+  window.adminLogout = function () {
+    setAdminPasscode(null);
+    showToast('Admin signed out.');
+    switchView('storefront');
+    loadDatabase();
   };
 
   function renderAll() {
