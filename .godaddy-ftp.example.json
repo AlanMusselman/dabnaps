@@ -1,6 +1,6 @@
 {
-  "ftpHost": "YOUR_GODADDY_FTP_HOST_OR_IP",
-  "ftpUser": "YOUR_GODADDY_FTP_USERNAME",
+  "ftpHost": "ftp.dabnaps.gg",
+  "ftpUser": "YOUR_GODADDY_CPANEL_USERNAME",
   "ftpPass": "YOUR_GODADDY_FTP_PASSWORD",
   "remoteRoot": "/public_html"
 }

@@ -24,7 +24,7 @@ param(
     [double]$Price = 0,
     [double]$Cost = 0,
     [string]$Name = "",
-    [string]$Category = "Silicone Trays",
+    [string]$Category = "Silicone Mats",
     [string]$Stage = "",
     [string]$Colorway = "",
     [string]$Description = "",
@@ -185,12 +185,12 @@ switch ($Action) {
             cost        = [Math]::Round($Cost, 2)
             stock       = $Stock
             reorderPoint= 10
-            inHouse     = ($Category -eq "Silicone Trays")
+            inHouse     = $true
             rdStage     = if ($Stage) { $Stage } else { "Stocked Inventory" }
             moldId      = "CUSTOM-SKU"
             curingSpec  = "Standard Spec"
-            colorway    = if ($Colorway) { $Colorway } else { "Cozy Earth" }
-            image       = if ($Category -eq "Silicone Trays") { "assets/images/silicone-tray.png" } elseif ($Category -eq "Dab Rigs") { "assets/images/dab-rig.png" } elseif ($Category -eq "Apparel") { "assets/images/tshirt.png" } else { "assets/images/fluffy-blanket.png" }
+            colorway    = if ($Colorway) { $Colorway } else { "Honey Gold & Obsidian" }
+            image       = if ($Category -eq "Silicone Mats") { "assets/images/silicone-tray.png" } elseif ($Category -eq "Dabbing Tools") { "assets/images/dab-tools.png" } else { "assets/images/fluffy-blanket.png" }
             badge       = "New Release"
             featured    = $true
             description = if ($Description) { $Description } else { "New Dabnaps cozy release." }

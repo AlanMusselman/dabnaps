@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
-    Dabnaps One-Click GoDaddy FTP Deployment & Inventory Sync Script
+    Dabnaps.gg One-Click GoDaddy FTP Deployment & Inventory Sync Script
 .DESCRIPTION
-    Automatically syncs local inventory data and uploads your Dabnaps storefront,
+    Automatically syncs local inventory data and uploads your Dabnaps.gg storefront,
     API, images, and inventory database directly to your GoDaddy Web Hosting server via FTP.
 .EXAMPLE
     .\scripts\deploy-godaddy.ps1
@@ -27,10 +27,10 @@ if (Test-Path $ManageScript) {
 if (Test-Path $ConfigPath) {
     $Config = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 } else {
-    Write-Host "`n=== FIRST-TIME GODADDY FTP SETUP ===" -ForegroundColor Cyan
+    Write-Host "`n=== FIRST-TIME GODADDY FTP SETUP (dabnaps.gg) ===" -ForegroundColor Cyan
     Write-Host "Enter your GoDaddy cPanel FTP details (they will be saved locally to .godaddy-ftp.json):`n" -ForegroundColor Gray
-    $FtpHost = Read-Host "1. FTP Host / IP (e.g. ftp.dabnaps.com or your GoDaddy Server IP)"
-    $FtpUser = Read-Host "2. FTP Username (e.g. your cPanel login or user@dabnaps.com)"
+    $FtpHost = Read-Host "1. FTP Host / IP (e.g. ftp.dabnaps.gg or your GoDaddy Server IP)"
+    $FtpUser = Read-Host "2. FTP Username (e.g. your cPanel login or user@dabnaps.gg)"
     $FtpPass = Read-Host "3. FTP Password"
     $RemoteRoot = Read-Host "4. Remote Folder (press Enter for '/public_html', or '/' if FTP user is already rooted)"
     if ([string]::IsNullOrWhiteSpace($RemoteRoot)) { $RemoteRoot = "/public_html" }
@@ -90,7 +90,7 @@ function Upload-FtpFile {
     Write-Host " [DONE]" -ForegroundColor Green
 }
 
-Write-Host "`n=== DEPLOYING DABNAPS TO GODADDY ($($Config.ftpHost)) ===" -ForegroundColor Cyan
+Write-Host "`n=== DEPLOYING DABNAPS.GG TO GODADDY ($($Config.ftpHost)) ===" -ForegroundColor Cyan
 
 $CleanRoot = $Config.remoteRoot.TrimEnd('/')
 Ensure-FtpDirectory "ftp://$($Config.ftpHost)$CleanRoot/data"
@@ -99,7 +99,7 @@ if ($InventoryOnly) {
     # Fast sync: only push updated inventory data
     Upload-FtpFile (Join-Path $WorkspaceRoot "data\inventory.json") "data/inventory.json"
     Upload-FtpFile (Join-Path $WorkspaceRoot "data\inventory-sync.js") "data/inventory-sync.js"
-    Write-Host "`n[SUCCESS] Live GoDaddy inventory updated!" -ForegroundColor Green
+    Write-Host "`n[SUCCESS] Live dabnaps.gg GoDaddy inventory updated!" -ForegroundColor Green
     exit 0
 }
 
@@ -109,19 +109,21 @@ Ensure-FtpDirectory "ftp://$($Config.ftpHost)$CleanRoot/assets/images"
 Ensure-FtpDirectory "ftp://$($Config.ftpHost)$CleanRoot/assets/images/logos"
 
 $FilesToDeploy = @(
-    @{ Local = "index.html";                  Remote = "index.html" },
-    @{ Local = "favicon.ico";                 Remote = "favicon.ico" },
-    @{ Local = "api.php";                     Remote = "api.php" },
-    @{ Local = "data\inventory.json";         Remote = "data/inventory.json" },
-    @{ Local = "data\inventory-sync.js";      Remote = "data/inventory-sync.js" },
-    @{ Local = "assets\styles.css";           Remote = "assets/styles.css" },
-    @{ Local = "assets\app.js";               Remote = "assets/app.js" },
-    @{ Local = "assets\images\logo.png";           Remote = "assets/images/logo.png" },
-    @{ Local = "assets\images\logo-icon.png";      Remote = "assets/images/logo-icon.png" },
-    @{ Local = "assets\images\silicone-tray.png";  Remote = "assets/images/silicone-tray.png" },
-    @{ Local = "assets\images\dab-rig.png";        Remote = "assets/images/dab-rig.png" },
-    @{ Local = "assets\images\tshirt.png";         Remote = "assets/images/tshirt.png" },
-    @{ Local = "assets\images\fluffy-blanket.png"; Remote = "assets/images/fluffy-blanket.png" }
+    @{ Local = "index.html";                              Remote = "index.html" },
+    @{ Local = "favicon.ico";                             Remote = "favicon.ico" },
+    @{ Local = "api.php";                                 Remote = "api.php" },
+    @{ Local = "data\inventory.json";                     Remote = "data/inventory.json" },
+    @{ Local = "data\inventory-sync.js";                  Remote = "data/inventory-sync.js" },
+    @{ Local = "assets\styles.css";                       Remote = "assets/styles.css" },
+    @{ Local = "assets\app.js";                           Remote = "assets/app.js" },
+    @{ Local = "assets\blanket-tech-pack.svg";            Remote = "assets/blanket-tech-pack.svg" },
+    @{ Local = "assets\blanket-pattern-guide.html";       Remote = "assets/blanket-pattern-guide.html" },
+    @{ Local = "assets\images\logo.png";                  Remote = "assets/images/logo.png" },
+    @{ Local = "assets\images\logo-icon.png";             Remote = "assets/images/logo-icon.png" },
+    @{ Local = "assets\images\silicone-tray.png";         Remote = "assets/images/silicone-tray.png" },
+    @{ Local = "assets\images\dab-tools.png";             Remote = "assets/images/dab-tools.png" },
+    @{ Local = "assets\images\fluffy-blanket.png";        Remote = "assets/images/fluffy-blanket.png" },
+    @{ Local = "assets\images\golden-cloud-blanket-flatlay.png"; Remote = "assets/images/golden-cloud-blanket-flatlay.png" }
 )
 
 Get-ChildItem -Path (Join-Path $WorkspaceRoot "assets\images\logos") -File | ForEach-Object {
@@ -139,5 +141,5 @@ foreach ($Item in $FilesToDeploy) {
 }
 
 Write-Host "`n======================================================" -ForegroundColor Cyan
-Write-Host "  DABNAPS DEPLOYED TO GODADDY SUCCESSFULLY!" -ForegroundColor Green
+Write-Host "  DABNAPS.GG DEPLOYED TO GODADDY SUCCESSFULLY!" -ForegroundColor Green
 Write-Host "======================================================" -ForegroundColor Cyan
