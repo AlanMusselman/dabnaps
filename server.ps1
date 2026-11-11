@@ -53,9 +53,16 @@ $MimeTypes = @{
 
 try {
     while ($Listener.IsListening) {
-        $Context = $Listener.GetContext()
-        $Request = $Context.Request
-        $Response = $Context.Response
+        try {
+            $Context = $Listener.GetContext()
+        } catch {
+            if (-not $Listener.IsListening) { break }
+            continue
+        }
+
+        try {
+            $Request = $Context.Request
+            $Response = $Context.Response
         $Response.Headers.Add("Access-Control-Allow-Origin", "*")
         $Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
         $Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, X-Admin-Passcode, Authorization")
@@ -196,6 +203,10 @@ try {
             $Response.OutputStream.Write($NotFoundBytes, 0, $NotFoundBytes.Length)
         }
         $Response.Close()
+        } catch {
+            # Client closed connection prematurely or I/O was aborted
+            try { if ($Response) { $Response.Close() } } catch { }
+        }
     }
 } finally {
     $Listener.Stop()

@@ -11,3 +11,5 @@ build/
 *.zip
 *.mp4
 *.mov
+.agents/
+.agents/**

@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dabnaps — Cozy Concentrates Gear, In-House Silicone Trays & Cloud Comfort</title>
+  <title>Dabnaps (dabnaps.gg) — Cozy Blankets, Silicone Mats &amp; Precision Dabbing Tools</title>
+  <link rel="canonical" href="https://dabnaps.gg/" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <link rel="icon" type="image/png" sizes="16x16" href="assets/images/logos/dabnaps-icon-16.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/images/logos/dabnaps-icon-32.png" />
   <link rel="icon" type="image/png" sizes="64x64" href="assets/images/logos/dabnaps-icon-64.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/images/logos/dabnaps-icon-192.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/images/logos/dabnaps-icon-180.png" />
-  <meta property="og:title" content="Dabnaps — Cozy Concentrates Gear & Cloud-Nine Comfort" />
-  <meta property="og:image" content="assets/images/logos/dabnaps-social-og-1200x630.png" />
+  <meta property="og:site_name" content="Dabnaps (dabnaps.gg)" />
+  <meta property="og:url" content="https://dabnaps.gg/" />
+  <meta property="og:title" content="Dabnaps (dabnaps.gg) — Cozy Blankets, Silicone Mats &amp; Precision Dabbing Tools" />
+  <meta property="og:description" content="Official dabnaps.gg store — Premium plush throw blankets, heat-resistant silicone dab mats, and precision titanium dabbing tools. Discreet on-demand shipping." />
+  <meta property="og:image" content="https://dabnaps.gg/assets/images/logos/dabnaps-social-og-1200x630.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,13 +25,15 @@
 
   <!-- Top Announcement Bar -->
   <div class="announcement-bar">
-    <span class="announcement-pill">In-House Lab Drop</span>
-    <span>Batch #1 of our Platinum-Cured <strong>Cloud Nine Silicone Dab Trays</strong> is live! Free cozy shipping on orders over $100.</span>
+    <span class="announcement-pill">Golden Hour Essentials</span>
+    <span>
+      ✨ <strong>Free Discreet US Shipping</strong> on Orders $50+ • Fast 24–48h On-Demand Dispatch
+    </span>
   </div>
 
-  <!-- Sticky Navigation -->
+  <!-- Sticky Navigation Header -->
   <header class="navbar">
-    <div class="brand-identity" onclick="switchView('storefront')">
+    <div class="brand-identity" onclick="filterCategory('all')">
       <img
         src="assets/images/logos/dabnaps-icon-128.png"
         srcset="assets/images/logos/dabnaps-icon-64.png 1x, assets/images/logos/dabnaps-icon-128.png 2x"
@@ -35,470 +41,344 @@
         class="brand-logo-img"
       />
       <div>
-        <div class="brand-title brand-font">DABNAPS</div>
-        <div class="brand-subtitle">Cozy Gear & Cloud Lounge</div>
+        <div class="brand-title brand-font">DABNAPS<span class="tld">.GG</span></div>
+        <div class="brand-subtitle">Cozy Blankets • Silicone Mats • Precision Dab Tools</div>
       </div>
     </div>
 
-    <nav class="nav-tabs" aria-label="Main Navigation">
-      <button class="nav-tab active" data-view="storefront" onclick="switchView('storefront')">
-        ☁️ Online Storefront
+    <!-- Category Filter Tabs -->
+    <nav class="nav-tabs" aria-label="Product Categories">
+      <button class="nav-tab active" data-category="all" onclick="filterCategory('all')">
+        All Products
       </button>
-      <button class="nav-tab" data-view="lab" onclick="switchView('lab')">
-        🧪 In-House Silicone Lab
+      <button class="nav-tab" data-category="Cozy Blankets" onclick="filterCategory('Cozy Blankets')">
+        Cozy Blankets
       </button>
-      <button class="nav-tab" data-view="admin" onclick="switchView('admin')">
-        📦 Inventory & Admin Portal
+      <button class="nav-tab" data-category="Silicone Mats" onclick="filterCategory('Silicone Mats')">
+        Silicone Mats
+      </button>
+      <button class="nav-tab" data-category="Dab Tools" onclick="filterCategory('Dab Tools')">
+        Dab Tools
       </button>
     </nav>
 
+    <!-- Header Actions: Search & Cart Button -->
     <div class="nav-actions">
-      <div id="sync-status-badge" class="sync-badge" title="Database synchronization status">
-        <span class="sync-dot"></span> Synced
+      <div class="search-box">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search gear &amp; blankets..."
+          oninput="handleSearch(this.value)"
+          aria-label="Search products"
+        />
       </div>
-      <button class="cart-btn" onclick="toggleCartDrawer(true)">
+      <button class="cart-btn" onclick="toggleCartDrawer(true)" id="header-cart-btn" aria-label="View Cloud Bag">
         <span>🛍️ Cloud Bag</span>
-        <span id="cart-count" class="cart-count">0</span>
+        <span class="cart-count" id="header-cart-count">0</span>
       </button>
     </div>
   </header>
 
-  <!-- ================================================================= -->
-  <!-- VIEW 1: CUSTOMER ONLINE STOREFRONT                                -->
-  <!-- ================================================================= -->
-  <main id="view-storefront">
+  <!-- Hero Section -->
+  <main>
     <section class="hero">
       <div class="hero-card">
         <div class="hero-content">
-          <div class="hero-eyebrow">✨ Engineered In-House • Built for the Ultimate Chill</div>
-          <h1>Where Concentrates Culture Meets Cloud-Nine Comfort.</h1>
+          <div class="hero-eyebrow">✨ Golden Hour Comfort • On-Demand Concentrates Gear</div>
+          <h1>Golden Hour Comfort &amp; <span>Precision Dabbing Essentials.</span></h1>
           <p>
-            From our in-house poured platinum-cured silicone dab trays and frosted borosilicate mini rigs to 300 GSM heavyweight tees and ultra-fluffy sherpa throw blankets — Dabnaps turns every session into a sanctuary.
+            Wrap yourself in cloud-nine comfort. High-performance food-grade silicone mats, surgical titanium carvers, and ultra-plush blankets crafted for the ultimate session. Direct to your door with fast, discreet shipping.
           </p>
           <div class="hero-cta-group">
-            <button class="btn-primary" onclick="filterByCategory('Silicone Trays'); document.getElementById('shop-catalog').scrollIntoView({behavior:'smooth'});">
-              Shop In-House Silicone Trays
+            <button class="btn-primary" onclick="filterCategory('Cozy Blankets')">
+              Shop Cozy Blankets →
             </button>
-            <button class="btn-secondary" onclick="switchView('lab')">
-              Explore Our Silicone R&D Lab →
+            <button class="btn-secondary" onclick="filterCategory('Silicone Mats')">
+              Explore Mats &amp; Tools
             </button>
           </div>
           <div class="hero-stats">
             <div>
+              <div class="hero-stat-val">24–48h</div>
+              <div class="hero-stat-lbl">On-Demand Dispatch</div>
+            </div>
+            <div>
               <div class="hero-stat-val">500°F</div>
-              <div class="hero-stat-lbl">Platinum-Cured Silicone Rating</div>
+              <div class="hero-stat-lbl">Food-Grade Silicone</div>
             </div>
             <div>
-              <div class="hero-stat-val">100%</div>
-              <div class="hero-stat-lbl">In-House Mold & Pour QC</div>
-            </div>
-            <div>
-              <div class="hero-stat-val">650 GSM</div>
-              <div class="hero-stat-lbl">Ultra-Fluffy Sherpa Blankets</div>
+              <div class="hero-stat-val">Grade 2</div>
+              <div class="hero-stat-lbl">Surgical Titanium</div>
             </div>
           </div>
         </div>
 
-        <div class="hero-showcase">
-          <div class="showcase-card" onclick="filterByCategory('Silicone Trays')">
-            <img src="assets/images/silicone-tray.png" alt="In-House Silicone Dab Tray" />
-            <span>In-House Silicone Trays</span>
-          </div>
-          <div class="showcase-card" onclick="filterByCategory('Dab Rigs')">
-            <img src="assets/images/dab-rig.png" alt="Frosted Cloud Dab Rig" />
-            <span>Artisan Borosilicate Rigs</span>
-          </div>
-          <div class="showcase-card" onclick="filterByCategory('Apparel')">
-            <img src="assets/images/tshirt.png" alt="Dabnaps Heavyweight Cloud Tee" />
-            <span>300 GSM Cloud Tees</span>
-          </div>
-          <div class="showcase-card" onclick="filterByCategory('Blankets')">
-            <img src="assets/images/fluffy-blanket.png" alt="Dabnaps Ultra-Fluffy Blanket" />
-            <span>Ultra-Fluffy Blankets</span>
+        <div class="hero-visual-card">
+          <img src="assets/images/fluffy-blanket.png" alt="Dabnaps Golden Hour Comfort Blanket" />
+          <div class="hero-visual-badge">
+            <span><strong>Signature Plush Throw</strong> • Ultra-Soft Sherpa</span>
+            <button class="mini-btn" onclick="addToCart('dn-blk-001')">+ Add to Bag</button>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Product Catalog Section -->
-    <section id="shop-catalog" class="section-container">
-      <div class="catalog-toolbar">
-        <div class="category-pills">
-          <button class="cat-pill active" data-cat="All" onclick="filterByCategory('All')">All Cozy Gear</button>
-          <button class="cat-pill" data-cat="Silicone Trays" onclick="filterByCategory('Silicone Trays')">Silicone Trays (In-House)</button>
-          <button class="cat-pill" data-cat="Dab Rigs" onclick="filterByCategory('Dab Rigs')">Dab Rigs</button>
-          <button class="cat-pill" data-cat="Apparel" onclick="filterByCategory('Apparel')">Heavyweight Tees</button>
-          <button class="cat-pill" data-cat="Blankets" onclick="filterByCategory('Blankets')">Fluffy Blankets</button>
-          <button class="cat-pill" data-cat="Bundles" onclick="filterByCategory('Bundles')">Cozy Bundles</button>
-        </div>
+    <section class="section-container" id="shop-catalog">
+      <div class="catalog-header">
+        <h2>Curated Collection</h2>
+        <p id="catalog-subtitle">Showing all 9 premium essentials</p>
+      </div>
 
-        <div class="search-box">
-          <span style="margin-right:8px;">🔍</span>
-          <input type="text" id="catalog-search" placeholder="Search rigs, silicone trays, blankets, SKU..." />
+      <div class="catalog-toolbar">
+        <div class="category-pills" aria-label="Category Filter Buttons">
+          <button class="cat-pill active" data-category="all" onclick="filterCategory('all')">All (9)</button>
+          <button class="cat-pill" data-category="Cozy Blankets" onclick="filterCategory('Cozy Blankets')">Cozy Blankets (3)</button>
+          <button class="cat-pill" data-category="Silicone Mats" onclick="filterCategory('Silicone Mats')">Silicone Mats (3)</button>
+          <button class="cat-pill" data-category="Dab Tools" onclick="filterCategory('Dab Tools')">Dab Tools (3)</button>
         </div>
       </div>
 
-      <div id="product-grid" class="product-grid"></div>
+      <!-- Dynamic Product Grid -->
+      <div class="product-grid" id="product-grid">
+        <!-- Rendered dynamically by assets/app.js -->
+      </div>
     </section>
   </main>
 
-  <!-- ================================================================= -->
-  <!-- VIEW 2: IN-HOUSE SILICONE R&D LAB                                 -->
-  <!-- ================================================================= -->
-  <section id="view-lab" class="section-container" style="display:none; margin-top:36px;">
-    <div class="lab-banner" style="margin-top:0;">
-      <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap:32px; align-items:center;">
-        <div>
-          <span class="hero-eyebrow">🧪 Dabnaps In-House Silicone Engineering</span>
-          <h2 style="font-size:2.2rem; margin-bottom:12px;">From CAD Mold to Platinum-Cured Perfection.</h2>
-          <p style="color:var(--mocha); margin-bottom:18px;">
-            Unlike generic mass-imported mats, every <strong>Dabnaps Silicone Tray</strong> is designed, degassed, poured, and post-cured in-house. We use FDA food/medical-grade two-part Platinum-Cured Liquid Silicone Rubber (LSR) with zero fillers — meaning it won't off-gas, discolor in 99% isopropyl alcohol, or warp under hot quartz tools.
-          </p>
+  <!-- Slide-Over Cloud Bag Cart Drawer -->
+  <div class="drawer-backdrop" id="cart-drawer-backdrop" onclick="handleDrawerBackdropClick(event)">
+    <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping Cart">
+      <div class="cart-drawer-header">
+        <h3>🛍️ Your Cloud Bag</h3>
+        <button class="close-btn" onclick="toggleCartDrawer(false)" aria-label="Close cart">&times;</button>
+      </div>
+
+      <!-- Cart Items List -->
+      <div class="cart-items-list" id="cart-items-list">
+        <!-- Injected via assets/app.js -->
+      </div>
+
+      <!-- Promo Code Input Form -->
+      <div class="promo-box">
+        <input
+          type="text"
+          id="promo-code-input"
+          placeholder="Enter promo code"
+          aria-label="Enter promotional discount code"
+          onkeydown="if (event.key === 'Enter') { event.preventDefault(); applyPromoCode(); }"
+        />
+        <button class="mini-btn" onclick="applyPromoCode()">Apply</button>
+      </div>
+
+      <!-- Applied Promo Tag (Hidden until applied) -->
+      <div id="applied-promo-tag" class="applied-promo-tag" style="display: none;">
+        <span>🎉 VIP Member Discount (-25%) Applied!</span>
+        <button onclick="removePromoCode()">Remove</button>
+      </div>
+
+      <!-- Cart Totals Summary -->
+      <div class="cart-summary">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">$0.00</span>
         </div>
-        <div>
-          <img src="assets/images/silicone-tray.png" alt="Cloud Nine Silicone Station" style="width:100%; height:240px; object-fit:cover; border-radius:var(--radius-lg); border:2px solid var(--oatmeal-dark);" />
+        <div class="summary-row discount" id="cart-discount-row" style="display: none;">
+          <span>Member Discount (25%)</span>
+          <span id="cart-discount">-$0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>Shipping</span>
+          <span id="cart-shipping">Calculated at checkout</span>
+        </div>
+        <div class="summary-row total">
+          <span>Grand Total</span>
+          <span id="cart-grand-total">$0.00</span>
         </div>
       </div>
 
-      <div class="lab-steps">
-        <div class="lab-step">
-          <span class="lab-step-num">1</span>
-          <h4>CNC 6061 Aluminum Tooling</h4>
-          <p style="font-size:0.85rem; color:var(--mocha); margin-top:6px;">
-            We mill custom bead-blasted aluminum molds with precision pockets for 14mm/10mm bangers, cotton swabs, iso vials, and terp jars.
-          </p>
-        </div>
-        <div class="lab-step">
-          <span class="lab-step-num">2</span>
-          <h4>29 inHg Vacuum Degassing</h4>
-          <p style="font-size:0.85rem; color:var(--mocha); margin-top:6px;">
-            Part A & Part B platinum silicone is hand-swirled with Radiant Dab Gold, Honey Wax Amber, and Obsidian pigments, then vacuum-degassed to eliminate micro-bubbles.
-          </p>
-        </div>
-        <div class="lab-step">
-          <span class="lab-step-num">3</span>
-          <h4>Thermal Cure & 4h Post-Cure</h4>
-          <p style="font-size:0.85rem; color:var(--mocha); margin-top:6px;">
-            Every tray undergoes a 4-hour 392°F post-cure oven cycle to lock in Shore 50A hardness and 500°F thermal stability.
-          </p>
-        </div>
-        <div class="lab-step">
-          <span class="lab-step-num">4</span>
-          <h4>Laser Serialization & QC</h4>
-          <p style="font-size:0.85rem; color:var(--mocha); margin-top:6px;">
-            Each tray is inspected for flash, tested with 99% ISO, and logged directly into our live inventory tracker before hitting the storefront.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-panel-card" style="margin-top:28px;">
-      <div class="admin-header-row">
-        <div>
-          <h3>Active In-House Silicone Production Batches</h3>
-          <p style="font-size:0.86rem; color:var(--mocha);">Real-time R&D and pouring schedule tracked in <code>data/inventory.json</code></p>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="inventory-table">
-          <thead>
-            <tr>
-              <th>Batch ID</th>
-              <th>Product / SKU</th>
-              <th>Current Stage</th>
-              <th>QC Yield</th>
-              <th>Silicone Lot & Pigment Mix</th>
-              <th>Cure Spec</th>
-              <th>Lab Notes</th>
-            </tr>
-          </thead>
-          <tbody id="lab-batches-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================================================================= -->
-  <!-- VIEW 3: ADMIN INVENTORY & STORE MANAGEMENT PORTAL                 -->
-  <!-- ================================================================= -->
-  <section id="view-admin" class="section-container" style="display:none; margin-top:36px;">
-    <div class="admin-header-row" style="margin-bottom:24px;">
-      <div>
-        <h2 style="font-size:2rem;">Dabnaps Inventory & Store Command Center</h2>
-        <p style="color:var(--mocha);">Adjust stock levels, pricing, R&D stages, or ask your Antigravity AI Agent to run updates for you.</p>
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn-primary" onclick="openNewProductModal(true)">+ Add New SKU</button>
-        <button class="btn-secondary" onclick="exportInventoryJson()">⬇ Export inventory.json</button>
-      </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div id="admin-kpi-grid" class="kpi-grid"></div>
-
-    <!-- How to use Antigravity AI to maintain the store -->
-    <div class="agent-command-box">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div>
-          <h3 style="color:var(--cream);">🤖 Antigravity AI Store & Inventory Maintenance</h3>
-          <p style="font-size:0.88rem; color:var(--oatmeal); margin-top:4px;">
-            You can ask me in chat anytime (e.g., <em>"Restock 30 Cloud Nine Silicone Trays"</em>, <em>"Check low stock items"</em>, or <em>"Add a new Lavender Hoodie SKU"</em>) and I will update your store automatically using <code>scripts/manage-inventory.ps1</code>:
-          </p>
-        </div>
-      </div>
-      <code>powershell -ExecutionPolicy Bypass -File .\scripts\manage-inventory.ps1 -Action restock -Sku "DN-SIL-MINI-AMB" -Delta 30 -Note "Batch 2026-10B finished curing"</code>
-    </div>
-
-    <!-- Live SKU & Stock Table -->
-    <div class="admin-panel-card">
-      <div class="admin-header-row">
-        <h3>Live SKU Inventory, Pricing & R&D Status</h3>
-        <span style="font-size:0.82rem; color:var(--mocha);">Edits immediately update the Storefront & persist to database</span>
-      </div>
-      <div class="table-wrap">
-        <table class="inventory-table">
-          <thead>
-            <tr>
-              <th>Product & SKU</th>
-              <th>R&D / Stock Stage</th>
-              <th>On-Hand Stock</th>
-              <th>Alert Status</th>
-              <th>Retail Price</th>
-              <th>Unit Cost</th>
-              <th>Total Retail Value</th>
-            </tr>
-          </thead>
-          <tbody id="admin-inventory-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Customer Orders & Fulfillment -->
-    <div class="admin-panel-card">
-      <div class="admin-header-row">
-        <h3>Recent Customer Orders & Fulfillment</h3>
-      </div>
-      <div class="table-wrap">
-        <table class="inventory-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Timestamp</th>
-              <th>Items Ordered</th>
-              <th>Order Total</th>
-              <th>Fulfillment Status</th>
-            </tr>
-          </thead>
-          <tbody id="admin-orders-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Activity Log -->
-    <div class="admin-panel-card">
-      <div class="admin-header-row">
-        <h3>Inventory Audit & Agent Activity Log</h3>
-      </div>
-      <div id="admin-activity-log"></div>
-    </div>
-
-    <!-- Brand Logo & Multi-Size Asset Kit -->
-    <div class="admin-panel-card">
-      <div class="admin-header-row">
-        <div>
-          <h3>🎨 Official Dabnaps Brand Logo Kit (Multi-Size & Multi-Format)</h3>
-          <p style="font-size:0.86rem; color:var(--muted-gold);">Consistent master logos generated across all standard web, print, merch, and favicon resolutions in <code>assets/images/logos/</code>.</p>
-        </div>
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px;">
-        <div style="background:var(--charcoal); border:1px solid var(--charcoal-border); border-radius:var(--radius-md); padding:18px; text-align:center;">
-          <img src="assets/images/logos/dabnaps-icon-256.png" alt="Dabnaps Medallion Icon" style="width:96px; height:96px; object-fit:contain; margin-bottom:10px;" />
-          <h4 style="color:var(--gold-bright); margin-bottom:6px;">Medallion Emblem (Icon)</h4>
-          <p style="font-size:0.78rem; color:var(--muted-gold); margin-bottom:12px;">Transparent PNG • Centered 1:1 Circle</p>
-          <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-1024.png" download>1024px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-512.png" download>512px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-256.png" download>256px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-192.png" download>192px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-180.png" download>180px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-128.png" download>128px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-96.png" download>96px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-64.png" download>64px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-48.png" download>48px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-32.png" download>32px</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-icon-16.png" download>16px</a>
-            <a class="mini-btn" href="favicon.ico" download>favicon.ico</a>
-          </div>
-        </div>
-
-        <div style="background:var(--charcoal); border:1px solid var(--charcoal-border); border-radius:var(--radius-md); padding:18px; text-align:center;">
-          <img src="assets/images/logos/dabnaps-logo-full-transparent-256.png" alt="Dabnaps Full Vertical Logo" style="width:96px; height:96px; object-fit:contain; margin-bottom:10px;" />
-          <h4 style="color:var(--gold-bright); margin-bottom:6px;">Full Vertical Lockup</h4>
-          <p style="font-size:0.78rem; color:var(--muted-gold); margin-bottom:12px;">Medallion + Wordmark (Transparent & Dark)</p>
-          <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-transparent-1024.png" download>1024px (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-transparent-512.png" download>512px (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-transparent-256.png" download>256px (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-transparent-128.png" download>128px (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-dark-1024.png" download>1024px (Dark)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-dark-512.png" download>512px (Dark)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-full-dark-256.png" download>256px (Dark)</a>
-          </div>
-        </div>
-
-        <div style="background:var(--charcoal); border:1px solid var(--charcoal-border); border-radius:var(--radius-md); padding:18px; text-align:center;">
-          <img src="assets/images/logos/dabnaps-logo-horizontal-600x180.png" alt="Dabnaps Horizontal Logo" style="width:100%; max-width:220px; height:96px; object-fit:contain; margin-bottom:10px;" />
-          <h4 style="color:var(--gold-bright); margin-bottom:6px;">Horizontal & Social Banners</h4>
-          <p style="font-size:0.78rem; color:var(--muted-gold); margin-bottom:12px;">Headers, Wordmarks & OpenGraph</p>
-          <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-horizontal-1200x360.png" download>1200×360 (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-horizontal-600x180.png" download>600×180 (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-horizontal-300x90.png" download>300×90 (Trans)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-logo-horizontal-dark-1200x360.png" download>1200×360 (Dark)</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-wordmark-800x160.png" download>Wordmark 800×160</a>
-            <a class="mini-btn" href="assets/images/logos/dabnaps-social-og-1200x630.png" download>Social OG 1200×630</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================================================================= -->
-  <!-- SLIDE-OVER SHOPPING CART DRAWER                                   -->
-  <!-- ================================================================= -->
-  <div id="cart-drawer-backdrop" class="drawer-backdrop" onclick="if(event.target===this) toggleCartDrawer(false)">
-    <aside class="cart-drawer">
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--oatmeal-dark); padding-bottom:14px;">
-        <h3 style="font-size:1.4rem;">🛍️ Your Cloud Bag</h3>
-        <button class="mini-btn" onclick="toggleCartDrawer(false)">✕ Close</button>
-      </div>
-
-      <div id="cart-items-list" class="cart-items-list"></div>
-
-      <div style="border-top:1px solid var(--oatmeal-dark); padding-top:16px;">
-        <div class="form-group" style="margin-bottom:10px;">
-          <label>Your Name (for Order Log)</label>
-          <input type="text" id="checkout-name" placeholder="e.g., Alex Rivera" />
-        </div>
-        <div class="form-group" style="margin-bottom:14px;">
-          <label>Email Address</label>
-          <input type="email" id="checkout-email" placeholder="alex@example.com" />
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:700; margin-bottom:14px;">
-          <span>Total</span>
-          <span id="cart-total-price" class="brand-font">$0.00</span>
-        </div>
-        <button class="btn-primary" style="width:100%;" onclick="checkoutOrder()">
-          Complete Cozy Order (Auto-Deduct Stock)
-        </button>
-      </div>
+      <button class="btn-primary w-100" id="cart-checkout-btn" onclick="openCheckoutModal()">
+        Proceed to Checkout →
+      </button>
     </aside>
   </div>
 
-  <!-- ================================================================= -->
-  <!-- MODAL: ADD NEW PRODUCT SKU                                        -->
-  <!-- ================================================================= -->
-  <div id="new-product-modal" class="modal-backdrop" onclick="if(event.target===this) openNewProductModal(false)">
-    <div class="modal-card">
-      <h3>Add New Dabnaps Product SKU</h3>
-      <p style="font-size:0.86rem; color:var(--mocha);">Create a new item in the catalog and inventory tracker.</p>
-      <form onsubmit="createNewProduct(event)">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>SKU Code *</label>
-            <input type="text" id="np-sku" placeholder="DN-SIL-NEW-01" required />
+  <!-- Checkout Modal -->
+  <div class="modal-backdrop" id="checkout-modal-backdrop" onclick="handleCheckoutBackdropClick(event)">
+    <div class="modal-card checkout" role="dialog" aria-modal="true" aria-label="Checkout">
+      <div class="modal-header">
+        <h3 id="checkout-modal-title">📦 On-Demand Order Checkout</h3>
+        <button class="close-btn" onclick="closeCheckoutModal()" aria-label="Close checkout">&times;</button>
+      </div>
+
+      <!-- Step 1: Customer & Shipping Form -->
+      <div id="checkout-form-container">
+        <p style="font-size:0.86rem; color:var(--muted-gold); margin-bottom:14px;">
+          Provide your shipping destination. All items are dispatched discreetly in plain packaging with trackable delivery.
+        </p>
+
+        <form id="checkout-form" onsubmit="handleCheckoutSubmit(event)">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="ship-name">Full Name *</label>
+              <input type="text" id="ship-name" required placeholder="Alex Rivera" />
+            </div>
+            <div class="form-group full">
+              <label for="ship-email">Email Address (for tracking &amp; receipt) *</label>
+              <input type="email" id="ship-email" required placeholder="alex@example.com" />
+            </div>
+            <div class="form-group full">
+              <label for="ship-address">Street Address *</label>
+              <input type="text" id="ship-address" required placeholder="123 Cloud Vista Way, Apt 4B" />
+            </div>
+            <div class="form-group">
+              <label for="ship-city">City *</label>
+              <input type="text" id="ship-city" required placeholder="Denver" />
+            </div>
+            <div class="form-group">
+              <label for="ship-state">State / Province *</label>
+              <input type="text" id="ship-state" required placeholder="CO" />
+            </div>
+            <div class="form-group">
+              <label for="ship-zip">ZIP / Postal Code *</label>
+              <input type="text" id="ship-zip" required placeholder="80202" />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Category *</label>
-            <select id="np-category">
-              <option value="Silicone Trays">Silicone Trays (In-House)</option>
-              <option value="Dab Rigs">Dab Rigs</option>
-              <option value="Apparel">Apparel</option>
-              <option value="Blankets">Blankets</option>
-              <option value="Bundles">Bundles</option>
-            </select>
+
+          <!-- Checkout Order Review Summary -->
+          <div class="checkout-review-box">
+            <div class="summary-row">
+              <span>Items Total (<span id="modal-item-count">0</span> items)</span>
+              <span id="modal-subtotal">$0.00</span>
+            </div>
+            <div class="summary-row discount" id="modal-discount-row" style="display: none;">
+              <span>Member Discount (25% Off)</span>
+              <span id="modal-discount">-$0.00</span>
+            </div>
+            <div class="summary-row">
+              <span>Discreet Shipping</span>
+              <span id="modal-shipping">FREE</span>
+            </div>
+            <div class="summary-row total">
+              <span>Total to Pay</span>
+              <span id="modal-total">$0.00</span>
+            </div>
           </div>
-          <div class="form-group full">
-            <label>Product Name *</label>
-            <input type="text" id="np-name" placeholder="e.g., Cloud Nine Silicone Carb Cap Dock" required />
-          </div>
-          <div class="form-group">
-            <label>Retail Price ($) *</label>
-            <input type="number" step="0.50" id="np-price" value="34.00" required />
-          </div>
-          <div class="form-group">
-            <label>Unit Cost / COGS ($)</label>
-            <input type="number" step="0.10" id="np-cost" value="8.50" required />
-          </div>
-          <div class="form-group">
-            <label>Initial Stock Qty *</label>
-            <input type="number" id="np-stock" value="25" required />
-          </div>
-          <div class="form-group">
-            <label>Colorway</label>
-            <input type="text" id="np-colorway" placeholder="Sage & Warm Cream" />
-          </div>
-          <div class="form-group full">
-            <label>Description</label>
-            <textarea id="np-desc" rows="2" placeholder="Describe the cozy craftsmanship and specs..."></textarea>
-          </div>
+
+          <button type="submit" class="btn-primary w-100" id="place-order-btn">
+            Place On-Demand Order ($<span id="place-order-amount">0.00</span>)
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: Order Confirmation Screen -->
+      <div id="checkout-confirmation-container" style="display: none; text-align: center; padding: 20px 0;">
+        <div style="font-size: 3.2rem; margin-bottom: 10px;">🎉</div>
+        <h3 style="color: var(--gold-primary); font-size: 1.6rem; margin-bottom: 8px;">Order Confirmed!</h3>
+        <p style="color: var(--muted-gold); font-size: 0.95rem; margin-bottom: 16px;">
+          Thank you for choosing Dabnaps. Your order has been placed and automatically routed to our on-demand fulfillment network for discreet packaging and rapid dispatch.
+        </p>
+
+        <div>
+          <span class="order-id-badge" id="confirmed-order-id">ORD-XXXX</span>
         </div>
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
-          <button type="button" class="btn-secondary" onclick="openNewProductModal(false)">Cancel</button>
-          <button type="submit" class="btn-primary">Create SKU</button>
+
+        <div style="background:var(--charcoal); border:1px solid var(--charcoal-border); border-radius:var(--radius-md); padding:16px; margin:20px 0; text-align:left; font-size:0.86rem;">
+          <div style="margin-bottom:6px;"><strong>Recipient:</strong> <span id="confirmed-recipient"></span></div>
+          <div style="margin-bottom:6px;"><strong>Shipping Address:</strong> <span id="confirmed-address"></span></div>
+          <div style="margin-bottom:6px;"><strong>Total Paid:</strong> <span id="confirmed-total" style="color:var(--gold-bright); font-weight:700;"></span></div>
+          <div><strong>Estimated Dispatch:</strong> Within 24–48 hours</div>
         </div>
-      </form>
+
+        <button class="btn-primary" onclick="closeCheckoutModal()">
+          Continue Shopping
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- ================================================================= -->
-  <!-- MODAL: 21+ AGE VERIFICATION GATE                                  -->
-  <!-- ================================================================= -->
-  <div id="age-gate-modal" class="modal-backdrop">
+  <!-- Age Verification Gate Modal (21+) -->
+  <div class="modal-backdrop" id="age-gate-modal" role="dialog" aria-modal="true" aria-label="Age Verification Gate">
     <div class="modal-card">
       <img
-        src="assets/images/logos/dabnaps-icon-256.png"
-        srcset="assets/images/logos/dabnaps-icon-128.png 1x, assets/images/logos/dabnaps-icon-256.png 2x"
-        alt="Dabnaps Logo"
-        class="brand-logo-img brand-logo-lg"
+        src="assets/images/logos/dabnaps-icon-128.png"
+        alt="Dabnaps Medallion"
+        style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--gold-primary); margin-bottom: 16px; box-shadow: 0 0 16px rgba(255,184,0,0.4);"
       />
-      <h2 style="font-size:1.85rem; margin-bottom:8px;">Welcome to Dabnaps</h2>
-      <p style="font-size:0.94rem; color:var(--muted-gold); margin-bottom:24px;">
-        We craft cozy in-house silicone dab trays, artisan borosilicate rigs, heavyweight lounge tees, and ultra-fluffy cloud blankets. Please verify you are <strong>21 years of age or older</strong> to enter the Cloud Lounge.
+      <h2 style="font-size: 1.6rem; color: var(--gold-primary); margin-bottom: 12px;">Age Verification (21+)</h2>
+      <p style="color: var(--muted-gold); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.5;">
+        Welcome to <strong>Dabnaps (dabnaps.gg)</strong>. You must be 21 years of age or older to enter, purchase concentrates accessories, lifestyle tools, and comfort gear. Please confirm your age to proceed.
       </p>
-      <div style="display:flex; gap:12px; justify-content:center;">
-        <button class="btn-primary" onclick="confirmAgeGate(true)">I am 21 or Older — Enter</button>
-        <button class="btn-secondary" onclick="confirmAgeGate(false)">Exit</button>
+      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+        <button class="btn-primary" onclick="confirmAgeGate(true)">
+          I am 21 or Older
+        </button>
+        <button class="btn-secondary" onclick="confirmAgeGate(false)">
+          Exit
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer style="background: var(--charcoal); border-top: 1px solid var(--charcoal-border); color: var(--warm-cream); padding: 48px 4%; margin-top: 64px;">
-    <div style="max-width:1320px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:24px;">
-      <div style="display:flex; align-items:center; gap:14px;">
-        <img
-          src="assets/images/logos/dabnaps-icon-96.png"
-          srcset="assets/images/logos/dabnaps-icon-48.png 1x, assets/images/logos/dabnaps-icon-96.png 2x"
-          alt="Dabnaps"
-          class="brand-logo-img brand-logo-sm"
-        />
-        <div>
-          <div class="brand-font" style="font-size:1.3rem; color:var(--gold-primary);">DABNAPS LLC</div>
-          <div style="font-size:0.82rem; color:var(--muted-gold);">In-House Silicone Engineering • Artisan Glass • Cloud Comfort</div>
+  <!-- Toast Notification Container -->
+  <div class="toast" id="toast-notification" role="status" aria-live="polite"></div>
+
+  <!-- Brand Footer -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <h4 class="brand-font">DABNAPS<span style="color:var(--gold-bright); font-size:0.95rem;">.GG</span></h4>
+        <p style="margin-bottom: 14px; line-height: 1.55;">
+          Golden Hour concentrates gear and cloud-nine comfort. High-performance platinum silicone mats, surgical titanium carvers, and ultra-plush blankets fulfilled on-demand with zero warehouse clutter.
+        </p>
+        <div style="font-size: 0.8rem; color: var(--gold-primary); font-weight: 600;">
+          On-Demand Fulfillment • Fast Discreet US Shipping
         </div>
       </div>
-      <div style="font-size:0.82rem; color:var(--muted-gold);">
-        © 2026 Dabnaps LLC • Maintained with Antigravity AI Inventory & Store Engine • 21+ Adult Use Only
+
+      <div class="footer-col">
+        <h5>Shop Categories</h5>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="filterCategory('Cozy Blankets')">Cozy Blankets</a></li>
+          <li><a href="javascript:void(0)" onclick="filterCategory('Silicone Mats')">Silicone Mats</a></li>
+          <li><a href="javascript:void(0)" onclick="filterCategory('Dab Tools')">Dab Tools</a></li>
+          <li><a href="javascript:void(0)" onclick="filterCategory('all')">All Products</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>Customer Care</h5>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="showToast('Free shipping on all US orders $50+.')">Shipping Policy</a></li>
+          <li><a href="javascript:void(0)" onclick="showToast('All orders backed by a 30-day happiness guarantee.')">Returns &amp; Exchanges</a></li>
+          <li><a href="javascript:void(0)" onclick="showToast('Discreet plain-box packaging on all orders.')">Discreet Packaging</a></li>
+          <li><a href="javascript:void(0)" onclick="checkAgeGate()">Age Policy (21+)</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>Community &amp; Perks</h5>
+        <p style="font-size: 0.82rem; margin-bottom: 12px; line-height: 1.5;">
+          Join the Dabnaps community for exclusive session drops, limited-edition blanket releases, and chill late-night lounges.
+        </p>
+        <button class="mini-btn" onclick="filterCategory('all')">
+          Explore Collection
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>
+        &copy; 2026 Dabnaps LLC (dabnaps.gg). All rights reserved. Intended exclusively for legal adult use (21+).
+      </div>
+      <div>
+        Official Domain: <a href="https://dabnaps.gg/" style="color:var(--gold-bright); text-decoration:none;">dabnaps.gg</a>
       </div>
     </div>
   </footer>
 
-  <!-- Toast Notification -->
-  <div id="toast-notification" class="toast"></div>
-
-  <!-- Load Synced Data & Application Logic -->
+  <!-- Scripts: Static fallback first, then application logic -->
   <script src="data/inventory-sync.js"></script>
   <script src="assets/app.js"></script>
 </body>

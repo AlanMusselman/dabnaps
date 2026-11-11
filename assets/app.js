@@ -1,741 +1,601 @@
-﻿// Dabnaps Storefront + Admin Inventory & In-House R&D Application
+// Dabnaps (dabnaps.gg) — Official On-Demand Storefront Application
+// Features: Curated 9-SKU Catalog, Category Filters, Cloud Bag Cart Drawer,
+// VIP Member Discount Engine, On-Demand Order Checkout & Stock Management.
+
 (function () {
-  let db = window.DABNAPS_INITIAL_DATA || { company: {}, products: [], inHouseProductionBatches: [], orders: [], activityLog: [] };
-  let activeView = 'storefront'; // 'storefront' | 'lab' | 'admin'
-  let selectedCategory = 'All';
-  let searchQuery = '';
+  'use strict';
+
+  // State Management
+  let db = null;
   let cart = [];
-  let serverOnline = false;
+  let appliedPromo = null;
+  let activeCategory = 'all';
+  let searchQuery = '';
+  let toastTimer = null;
 
-  // Initialize App
+  // Initialize Application
   async function init() {
-    checkAgeGate();
     await loadDatabase();
-    renderAll();
-    setupEventListeners();
+    loadCartFromStorage();
+    loadPromoFromStorage();
+    checkAgeGate();
+    renderStorefront();
+    updateCartUI();
   }
 
-  function checkAgeGate() {
-    const verified = localStorage.getItem('dabnaps_age_verified');
-    const modal = document.getElementById('age-gate-modal');
-    if (!verified && modal) {
-      modal.classList.add('open');
-    }
-  }
-
-  window.confirmAgeGate = function (isOfAge) {
-    const modal = document.getElementById('age-gate-modal');
-    if (isOfAge) {
-      localStorage.setItem('dabnaps_age_verified', 'true');
-      modal.classList.remove('open');
-      showToast('Welcome to the Cloud Lounge, cozy friend.');
-    } else {
-      alert('You must be 21+ to browse Dabnaps.');
-    }
-  };
-
-  function getAdminPasscode() {
-    return sessionStorage.getItem('dabnaps_admin_passcode') || '';
-  }
-
-  function setAdminPasscode(passcode) {
-    if (passcode) {
-      sessionStorage.setItem('dabnaps_admin_passcode', passcode);
-    } else {
-      sessionStorage.removeItem('dabnaps_admin_passcode');
-    }
-  }
-
-  function promptAdminPasscode() {
-    return new Promise((resolve) => {
-      let modal = document.getElementById('admin-auth-modal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'admin-auth-modal';
-        modal.className = 'modal-backdrop';
-        modal.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(10,10,10,0.85); display:none; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(6px);';
-        modal.innerHTML = `
-          <div class="modal-card" style="background:#1C1A17; border:1px solid #FFB800; border-radius:16px; padding:32px; max-width:420px; width:90%; color:#FFFDF7; text-align:center; box-shadow:0 16px 48px rgba(0,0,0,0.8);">
-            <div style="font-size:2.8rem; margin-bottom:12px;">🔒</div>
-            <h3 style="color:#FFB800; font-size:1.35rem; margin-bottom:8px; font-weight:700;">Admin Authentication</h3>
-            <p style="font-size:0.9rem; color:#E8B86D; line-height:1.4; margin-bottom:20px;">
-              Enter the Dabnaps administrative passcode to access wholesale COGS, production batches, and inventory management.
-            </p>
-            <form id="admin-auth-form" style="display:flex; flex-direction:column; gap:16px;">
-              <input type="password" id="admin-passcode-input" placeholder="Admin Passcode" autocomplete="current-password"
-                style="width:100%; box-sizing:border-box; padding:12px 16px; border-radius:8px; border:1px solid #8C5300; background:#0A0A0A; color:#FFFDF7; font-size:1rem; outline:none;" />
-              <div id="admin-auth-err" style="color:#EF4444; font-size:0.85rem; display:none;"></div>
-              <div style="display:flex; gap:12px; justify-content:center;">
-                <button type="button" id="admin-auth-cancel" class="btn-secondary" style="flex:1; padding:10px 16px;">Cancel</button>
-                <button type="submit" id="admin-auth-submit" class="btn-primary" style="flex:1; padding:10px 16px;">Unlock Portal</button>
-              </div>
-            </form>
-          </div>
-        `;
-        document.body.appendChild(modal);
-      }
-
-      const input = document.getElementById('admin-passcode-input');
-      const form = document.getElementById('admin-auth-form');
-      const cancelBtn = document.getElementById('admin-auth-cancel');
-      const errBox = document.getElementById('admin-auth-err');
-      errBox.style.display = 'none';
-      errBox.textContent = '';
-      input.value = '';
-      modal.style.display = 'flex';
-      setTimeout(() => input.focus(), 80);
-
-      const close = () => {
-        modal.style.display = 'none';
-        form.onsubmit = null;
-        cancelBtn.onclick = null;
-      };
-
-      cancelBtn.onclick = () => {
-        close();
-        resolve(null);
-      };
-
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const code = input.value.trim();
-        if (!code) {
-          errBox.textContent = 'Please enter a passcode.';
-          errBox.style.display = 'block';
-          return;
-        }
-        close();
-        resolve(code);
-      };
-    });
-  }
-
-  async function loadDatabase(preferredScope) {
-    const passcode = getAdminPasscode();
-    const headers = {};
-    if (passcode) {
-      headers['X-Admin-Passcode'] = passcode;
-      headers['Authorization'] = 'Bearer ' + passcode;
-    }
-    const query = (passcode || preferredScope === 'admin') ? '?scope=admin' : '';
-    for (const endpoint of ['/api/inventory' + query, 'api.php' + query]) {
+  // Load Database (with localStorage override and static fallback)
+  async function loadDatabase() {
+    const localOverride = localStorage.getItem('dabnaps_db_override');
+    if (localOverride) {
       try {
-        const res = await fetch(endpoint, { cache: 'no-store', headers });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.products)) {
-            db = data;
-            serverOnline = true;
-            updateSyncIndicator(true);
-            return true;
-          }
+        db = JSON.parse(localOverride);
+        if (db && db.products && db.products.length === 9) {
+          return;
         }
       } catch (e) {
-        // Try next endpoint or fallback
+        console.warn('Could not parse local DB override, falling back to static data.');
       }
     }
-    const cached = localStorage.getItem('dabnaps_db_override');
-    if (cached) {
-      try {
-        db = JSON.parse(cached);
-      } catch (e) {}
-    }
-    updateSyncIndicator(false);
-    return false;
-  }
 
-  async function persistDatabase(logAction) {
-    const now = new Date().toISOString();
-    db.company.lastUpdated = now;
-    if (logAction) {
-      db.activityLog = db.activityLog || [];
-      db.activityLog.unshift({
-        timestamp: now,
-        actor: 'Store/Admin UI',
-        action: logAction
-      });
-      if (db.activityLog.length > 50) db.activityLog.length = 50;
+    try {
+      const response = await fetch('data/inventory.json', { cache: 'no-cache' });
+      if (response.ok) {
+        db = await response.json();
+        return;
+      }
+    } catch (err) {
+      console.warn('Fetch inventory.json failed, loading static fallback window.DABNAPS_INITIAL_DATA.');
     }
 
-    localStorage.setItem('dabnaps_db_override', JSON.stringify(db));
-
-    const passcode = getAdminPasscode();
-    const reqHeaders = { 'Content-Type': 'application/json' };
-    if (passcode) {
-      reqHeaders['X-Admin-Passcode'] = passcode;
-      reqHeaders['Authorization'] = 'Bearer ' + passcode;
-    }
-
-    let savedRemote = false;
-    for (const endpoint of ['/api/inventory', 'api.php']) {
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: reqHeaders,
-          body: JSON.stringify(db)
-        });
-        if (res.ok) {
-          savedRemote = true;
-          break;
-        } else if (res.status === 401 || res.status === 403) {
-          showToast('Authentication failed: Write rejected by server.');
-          setAdminPasscode(null);
-          break;
-        }
-      } catch (e) {}
-    }
-    serverOnline = savedRemote;
-    updateSyncIndicator(savedRemote);
-    renderAll();
-  }
-
-  function updateSyncIndicator(isLiveApi) {
-    const badge = document.getElementById('sync-status-badge');
-    if (!badge) return;
-    if (isLiveApi) {
-      badge.innerHTML = '<span class="sync-dot"></span> Live JSON DB Synced';
+    if (window.DABNAPS_INITIAL_DATA) {
+      db = JSON.parse(JSON.stringify(window.DABNAPS_INITIAL_DATA));
     } else {
-      badge.innerHTML = '<span class="sync-dot" style="background:#E8B86D"></span> Local Sync Active';
+      db = { company: {}, products: [], orders: [], activityLog: [] };
     }
   }
 
-  // View Switching
-  window.switchView = async function (viewName) {
-    if (viewName === 'admin') {
-      let passcode = getAdminPasscode();
-      if (!passcode) {
-        passcode = await promptAdminPasscode();
-        if (!passcode) {
-          // User canceled
-          return;
-        }
-
-        // Verify passcode against server
-        let verified = false;
-        for (const endpoint of ['/api/inventory?scope=admin', 'api.php?scope=admin']) {
-          try {
-            const res = await fetch(endpoint, {
-              headers: {
-                'X-Admin-Passcode': passcode,
-                'Authorization': 'Bearer ' + passcode
-              }
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data && Array.isArray(data.products)) {
-                db = data;
-                verified = true;
-                break;
-              }
-            } else if (res.status === 401 || res.status === 403) {
-              showToast('Access Denied: Invalid admin passcode.');
-              return;
-            }
-          } catch (e) {
-            // offline / standalone file mode fallback
-          }
-        }
-
-        if (!verified && !serverOnline && passcode === 'Dabnaps2026!') {
-          verified = true;
-        }
-
-        if (!verified) {
-          showToast('Access Denied: Invalid admin passcode.');
-          return;
-        }
-
-        setAdminPasscode(passcode);
-        showToast('Admin access granted. COGS & orders unlocked.');
-      } else {
-        // Refresh admin data
-        await loadDatabase('admin');
-      }
+  // Local Storage Cart Helpers
+  function loadCartFromStorage() {
+    try {
+      const saved = localStorage.getItem('dabnaps_cart');
+      cart = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      cart = [];
     }
+  }
 
-    activeView = viewName;
-    document.querySelectorAll('.nav-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === viewName);
-    });
-    document.getElementById('view-storefront').style.display = viewName === 'storefront' ? 'block' : 'none';
-    document.getElementById('view-lab').style.display = viewName === 'lab' ? 'block' : 'none';
-    document.getElementById('view-admin').style.display = viewName === 'admin' ? 'block' : 'none';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    renderAll();
-  };
+  function saveCartToStorage() {
+    localStorage.setItem('dabnaps_cart', JSON.stringify(cart));
+  }
 
-  window.adminLogout = function () {
-    setAdminPasscode(null);
-    showToast('Admin signed out.');
-    switchView('storefront');
-    loadDatabase();
-  };
-
-  function renderAll() {
-    renderStorefront();
-    renderInHouseLab();
-    renderAdminDashboard();
-    renderCart();
+  function loadPromoFromStorage() {
+    const savedPromo = (localStorage.getItem('dabnaps_promo') || '').trim().toUpperCase();
+    if (savedPromo === 'DISCORD25') {
+      appliedPromo = 'DISCORD25';
+    } else {
+      appliedPromo = null;
+      if (savedPromo) localStorage.removeItem('dabnaps_promo');
+    }
   }
 
   // Storefront Rendering
-  function renderStorefront() {
+  window.renderStorefront = function () {
     const grid = document.getElementById('product-grid');
-    if (!grid) return;
+    const subtitle = document.getElementById('catalog-subtitle');
+    if (!grid || !db || !db.products) return;
 
-    const filtered = db.products.filter(p => {
-      const matchesCat = selectedCategory === 'All' || p.category === selectedCategory;
-      const q = searchQuery.toLowerCase().trim();
-      const matchesQuery = !q ||
+    let filtered = db.products.filter(p => {
+      const matchCat = (activeCategory === 'all') || (p.category === activeCategory);
+      const q = searchQuery.toLowerCase();
+      const matchSearch = !q ||
         p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.colorway.toLowerCase().includes(q);
-      return matchesCat && matchesQuery;
+        (p.colorway && p.colorway.toLowerCase().includes(q)) ||
+        p.sku.toLowerCase().includes(q);
+      return matchCat && matchSearch;
     });
 
+    if (subtitle) {
+      if (activeCategory === 'all') {
+        subtitle.textContent = `Showing all ${filtered.length} premium essentials`;
+      } else {
+        subtitle.textContent = `Showing ${filtered.length} products in ${activeCategory}`;
+      }
+    }
+
     if (filtered.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding: 48px; background: var(--white); border-radius: var(--radius-lg);">
-        <h3>No cozy gear matched your filter</h3>
-        <p style="color:var(--mocha); margin-top:8px;">Try clearing your search or selecting "All" categories.</p>
-      </div>`;
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 20px; color: var(--muted-gold);">
+          <div style="font-size: 2.4rem; margin-bottom: 12px;">🔍</div>
+          <h3>No matching items found</h3>
+          <p style="margin-top: 8px;">Try clearing your search query or selecting a different category.</p>
+          <button class="btn-secondary" style="margin-top: 16px;" onclick="filterCategory('all'); document.getElementById('search-input').value=''; handleSearch('');">Reset Filters</button>
+        </div>
+      `;
       return;
     }
 
     grid.innerHTML = filtered.map(p => {
-      const isOut = p.stock <= 0;
-      const isLow = !isOut && p.stock <= p.reorderPoint;
-      const stockClass = isOut ? 'out' : (isLow ? 'low' : '');
-      const stockText = isOut ? 'Sold Out' : (isLow ? `Only ${p.stock} left` : `${p.stock} in stock`);
-      const specsHtml = (p.specs || []).slice(0, 3).map(s => `<li>• ${s}</li>`).join('');
+      let stockPillHtml = '';
+      if (p.stock >= 18) {
+        stockPillHtml = `<span class="stock-pill in-stock"><span class="dot"></span> In Stock (${p.stock} available)</span>`;
+      } else if (p.stock > 0) {
+        stockPillHtml = `<span class="stock-pill low-stock"><span class="dot"></span> Low Stock: Only ${p.stock} left — ships in 24h</span>`;
+      } else {
+        stockPillHtml = `<span class="stock-pill out-of-stock">Sold Out</span>`;
+      }
+
+      const specsListHtml = (p.specs && p.specs.length)
+        ? `<ul class="product-specs">${p.specs.map(s => `<li>${s}</li>`).join('')}</ul>`
+        : '';
+
+      const isSoldOut = p.stock <= 0;
 
       return `
-        <article class="product-card">
+        <article class="product-card" id="card-${p.id}">
           <div class="product-img-wrap">
             <img src="${p.image}" alt="${p.name}" loading="lazy" />
-            <span class="product-badge ${p.inHouse ? 'inhouse' : ''}">${p.badge || p.category}</span>
-            <span class="stock-pill ${stockClass}">${stockText}</span>
+            <span class="product-badge">${p.badge || p.category}</span>
+            ${stockPillHtml}
           </div>
           <div class="product-body">
             <div class="product-meta">
               <span>${p.category}</span>
-              <span>SKU: ${p.sku}</span>
+              <span>${p.sku}</span>
             </div>
             <h3 class="product-title">${p.name}</h3>
-            <div class="product-colorway">${p.colorway} ${p.inHouse ? '• In-House Silicone' : ''}</div>
+            ${p.colorway ? `<div class="product-colorway">${p.colorway}</div>` : ''}
             <p class="product-desc">${p.description}</p>
-            <ul class="product-specs">${specsHtml}</ul>
+            ${specsListHtml}
             <div class="product-footer">
-              <span class="product-price">$${Number(p.price).toFixed(2)}</span>
-              <button class="add-cart-btn" onclick="addToCart('${p.id}')" ${isOut ? 'disabled' : ''}>
-                ${isOut ? 'Out of Stock' : '+ Add to Cloud Bag'}
+              <span class="product-price">$${p.price.toFixed(2)}</span>
+              <button
+                class="add-cart-btn"
+                onclick="addToCart('${p.id}')"
+                ${isSoldOut ? 'disabled' : ''}
+                aria-label="Add ${p.name} to Cloud Bag"
+              >
+                ${isSoldOut ? 'Sold Out' : '+ Add to Bag'}
               </button>
             </div>
           </div>
         </article>
       `;
     }).join('');
-  }
+  };
 
-  // Category & Search
-  window.filterByCategory = function (cat) {
-    selectedCategory = cat;
-    document.querySelectorAll('.cat-pill').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.cat === cat);
+  // Category Filtering
+  window.filterCategory = function (category) {
+    activeCategory = category;
+
+    // Update navbar tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.category === category);
     });
+
+    // Update toolbar pills
+    document.querySelectorAll('.cat-pill').forEach(pill => {
+      pill.classList.toggle('active', pill.dataset.category === category);
+    });
+
+    renderStorefront();
+
+    // If invoked from hero, scroll smoothly to catalog
+    const catalogEl = document.getElementById('shop-catalog');
+    if (catalogEl && category !== 'all') {
+      const topOffset = catalogEl.getBoundingClientRect().top + window.pageYOffset - 90;
+      window.scrollTo({ top: topOffset, behavior: 'smooth' });
+    }
+  };
+
+  // Search Filtering
+  window.handleSearch = function (val) {
+    searchQuery = (val || '').trim();
     renderStorefront();
   };
 
-  // Cart Functions
+  // Cart Operations
   window.addToCart = function (productId) {
+    if (!db || !db.products) return;
     const product = db.products.find(p => p.id === productId);
-    if (!product || product.stock <= 0) return;
+    if (!product) return;
 
-    const existing = cart.find(item => item.id === productId);
-    const currentQty = existing ? existing.qty : 0;
-    if (currentQty + 1 > product.stock) {
-      showToast(`Only ${product.stock} units of ${product.name} available!`);
+    if (product.stock <= 0) {
+      showToast('Sorry, this item is currently sold out.');
       return;
     }
 
-    if (existing) {
-      existing.qty += 1;
-    } else {
-      cart.push({ id: product.id, sku: product.sku, name: product.name, price: product.price, image: product.image, qty: 1 });
+    const existingIndex = cart.findIndex(item => item.id === productId);
+    const currentQtyInCart = existingIndex > -1 ? cart[existingIndex].qty : 0;
+
+    if (currentQtyInCart + 1 > product.stock) {
+      showToast(`Only ${product.stock} units available in stock.`);
+      return;
     }
-    renderCart();
-    showToast(`Added ${product.name} to your Cloud Bag`);
+
+    if (existingIndex > -1) {
+      cart[existingIndex].qty += 1;
+    } else {
+      cart.push({
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        price: product.price,
+        qty: 1,
+        image: product.image,
+        category: product.category
+      });
+    }
+
+    saveCartToStorage();
+    updateCartUI();
+    showToast(`Added "${product.name}" to Cloud Bag`);
   };
 
   window.updateCartQty = function (productId, delta) {
     const item = cart.find(i => i.id === productId);
     if (!item) return;
-    const product = db.products.find(p => p.id === productId);
+
+    const product = db && db.products ? db.products.find(p => p.id === productId) : null;
+    const maxStock = product ? product.stock : 99;
+
     const newQty = item.qty + delta;
-    if (newQty <= 0) {
-      cart = cart.filter(i => i.id !== productId);
-    } else if (product && newQty > product.stock) {
-      showToast(`Max available stock (${product.stock}) reached`);
+    if (newQty > maxStock) {
+      showToast(`Only ${maxStock} units available.`);
       return;
+    }
+
+    if (newQty <= 0) {
+      removeFromCart(productId);
     } else {
       item.qty = newQty;
+      saveCartToStorage();
+      updateCartUI();
     }
-    renderCart();
+  };
+
+  window.removeFromCart = function (productId) {
+    cart = cart.filter(i => i.id !== productId);
+    saveCartToStorage();
+    updateCartUI();
+    showToast('Item removed from Cloud Bag');
   };
 
   window.toggleCartDrawer = function (open) {
-    const drawer = document.getElementById('cart-drawer-backdrop');
-    if (drawer) drawer.classList.toggle('open', open);
+    const drawerBackdrop = document.getElementById('cart-drawer-backdrop');
+    if (!drawerBackdrop) return;
+    if (open) {
+      drawerBackdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    } else {
+      drawerBackdrop.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   };
 
-  function renderCart() {
-    const countEl = document.getElementById('cart-count');
-    const listEl = document.getElementById('cart-items-list');
-    const totalEl = document.getElementById('cart-total-price');
+  window.handleDrawerBackdropClick = function (e) {
+    if (e.target.id === 'cart-drawer-backdrop') {
+      toggleCartDrawer(false);
+    }
+  };
 
-    const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
-    const totalPrice = cart.reduce((sum, i) => sum + (i.qty * i.price), 0);
+  // Cart Calculation & UI Refresh
+  function updateCartUI() {
+    const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-    if (countEl) countEl.textContent = totalQty;
-    if (totalEl) totalEl.textContent = `$${totalPrice.toFixed(2)}`;
-
-    if (!listEl) return;
-    if (cart.length === 0) {
-      listEl.innerHTML = `<div style="text-align:center; padding:40px 10px; color:var(--mocha);">
-        <p style="font-size:1.05rem; font-weight:600;">Your Cloud Bag is empty</p>
-        <p style="font-size:0.86rem; margin-top:6px;">Add an in-house silicone dab tray, frosted mini rig, or fluffy throw blanket to get cozy.</p>
-      </div>`;
-      return;
+    // Update Header Badges
+    const headerCartCount = document.getElementById('header-cart-count');
+    if (headerCartCount) {
+      headerCartCount.textContent = totalCount;
     }
 
-    listEl.innerHTML = cart.map(item => `
-      <div class="cart-item">
-        <img src="${item.image}" alt="${item.name}" />
-        <div style="flex:1;">
-          <div style="font-weight:700; font-size:0.9rem;">${item.name}</div>
-          <div style="font-size:0.78rem; color:var(--mocha);">${item.sku} • $${item.price.toFixed(2)} each</div>
-          <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-            <button class="mini-btn" onclick="updateCartQty('${item.id}', -1)">-</button>
-            <span style="font-weight:700; font-size:0.88rem;">${item.qty}</span>
-            <button class="mini-btn" onclick="updateCartQty('${item.id}', 1)">+</button>
+    // Update Drawer Items
+    const itemsList = document.getElementById('cart-items-list');
+    const checkoutBtn = document.getElementById('cart-checkout-btn');
+
+    if (itemsList) {
+      if (cart.length === 0) {
+        itemsList.innerHTML = `
+          <div class="cart-empty-state">
+            <div class="icon">☁️</div>
+            <h4>Your Cloud Bag is empty</h4>
+            <p style="font-size:0.86rem; margin-top:6px;">Add blankets, silicone mats, or dabbing tools to get started!</p>
           </div>
-        </div>
-        <div style="font-weight:700;">$${(item.qty * item.price).toFixed(2)}</div>
-      </div>
-    `).join('');
-  }
-
-  window.checkoutOrder = async function () {
-    if (cart.length === 0) {
-      showToast('Your Cloud Bag is empty!');
-      return;
-    }
-    const customerName = document.getElementById('checkout-name').value.trim() || 'Cozy Guest';
-    const customerEmail = document.getElementById('checkout-email').value.trim() || 'guest@dabnaps.com';
-
-    let orderTotal = 0;
-    const orderItems = [];
-
-    for (const item of cart) {
-      const prod = db.products.find(p => p.id === item.id);
-      if (!prod || prod.stock < item.qty) {
-        showToast(`Insufficient stock for ${item.name}`);
-        return;
-      }
-      prod.stock -= item.qty;
-      orderTotal += item.qty * item.price;
-      orderItems.push({ sku: prod.sku, name: prod.name, qty: item.qty, price: item.price });
-    }
-
-    const orderId = 'ORD-' + Math.floor(1050 + Math.random() * 8900);
-    db.orders = db.orders || [];
-    db.orders.unshift({
-      orderId,
-      customer: customerName,
-      email: customerEmail,
-      date: new Date().toISOString(),
-      status: 'Processing',
-      total: orderTotal,
-      items: orderItems
-    });
-
-    cart = [];
-    document.getElementById('checkout-name').value = '';
-    document.getElementById('checkout-email').value = '';
-    toggleCartDrawer(false);
-
-    await persistDatabase(`New Customer Order ${orderId} by ${customerName} ($${orderTotal.toFixed(2)}) — Stock automatically deducted.`);
-    showToast(`Order ${orderId} confirmed! Inventory automatically updated.`);
-  };
-
-  // In-House Silicone Lab View
-  function renderInHouseLab() {
-    const batchTable = document.getElementById('lab-batches-tbody');
-    if (!batchTable) return;
-
-    const batches = db.inHouseProductionBatches || [];
-    batchTable.innerHTML = batches.map(b => `
-      <tr>
-        <td><strong>${b.batchId}</strong></td>
-        <td>${b.productName}<br><small style="color:var(--mocha)">${b.productSku}</small></td>
-        <td><span class="cat-pill active" style="padding:4px 12px; font-size:0.76rem;">${b.stage}</span></td>
-        <td>${b.unitsPassedQC} / ${b.unitsPoured} units</td>
-        <td>${b.siliconeLot}<br><small style="color:var(--mocha)">${b.pigmentMix}</small></td>
-        <td>${b.cureTempF}°F • ${b.postCureHours}h</td>
-        <td style="font-size:0.82rem; color:var(--mocha);">${b.notes}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Admin & Inventory Dashboard Rendering
-  function renderAdminDashboard() {
-    const kpiContainer = document.getElementById('admin-kpi-grid');
-    const tbody = document.getElementById('admin-inventory-tbody');
-    const ordersTbody = document.getElementById('admin-orders-tbody');
-    const logList = document.getElementById('admin-activity-log');
-
-    if (!kpiContainer || !tbody) return;
-
-    let totalUnits = 0;
-    let retailVal = 0;
-    let costVal = 0;
-    let lowStockCount = 0;
-
-    db.products.forEach(p => {
-      totalUnits += p.stock;
-      retailVal += (p.stock * p.price);
-      costVal += (p.stock * p.cost);
-      if (p.stock <= p.reorderPoint) lowStockCount++;
-    });
-
-    const grossMarginPct = retailVal > 0 ? (((retailVal - costVal) / retailVal) * 100).toFixed(1) : '0.0';
-
-    kpiContainer.innerHTML = `
-      <div class="kpi-card">
-        <div class="kpi-label">Total Active SKUs</div>
-        <div class="kpi-value">${db.products.length}</div>
-        <div class="kpi-sub">${db.products.filter(p => p.inHouse).length} In-House Engineered</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Total Units in Stock</div>
-        <div class="kpi-value">${totalUnits}</div>
-        <div class="kpi-sub">Ready for immediate ship</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Retail Inventory Value</div>
-        <div class="kpi-value">$${retailVal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-        <div class="kpi-sub">COGS: $${costVal.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${grossMarginPct}% Margin)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Reorder / Low Stock Alerts</div>
-        <div class="kpi-value" style="color: ${lowStockCount > 0 ? 'var(--danger)' : 'var(--success)'}">${lowStockCount}</div>
-        <div class="kpi-sub">${lowStockCount > 0 ? 'Requires silicone pour or PO' : 'All stock levels healthy'}</div>
-      </div>
-    `;
-
-    tbody.innerHTML = db.products.map(p => {
-      const isLow = p.stock <= p.reorderPoint;
-      return `
-        <tr>
-          <td>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <img src="${p.image}" style="width:42px; height:42px; border-radius:8px; object-fit:cover;" />
-              <div>
-                <strong>${p.name}</strong>
-                <div style="font-size:0.76rem; color:var(--mocha);">${p.sku} • ${p.category}</div>
+        `;
+        if (checkoutBtn) checkoutBtn.disabled = true;
+      } else {
+        if (checkoutBtn) checkoutBtn.disabled = false;
+        itemsList.innerHTML = cart.map(item => `
+          <div class="cart-item">
+            <img src="${item.image}" alt="${item.name}" />
+            <div class="cart-item-details">
+              <div class="cart-item-name" title="${item.name}">${item.name}</div>
+              <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
+              <div class="cart-qty-row">
+                <button class="qty-btn" onclick="updateCartQty('${item.id}', -1)" aria-label="Decrease quantity">&minus;</button>
+                <span class="qty-val">${item.qty}</span>
+                <button class="qty-btn" onclick="updateCartQty('${item.id}', 1)" aria-label="Increase quantity">&plus;</button>
+                <span style="font-size:0.82rem; font-weight:700; color:var(--warm-cream); margin-left:auto;">
+                  $${(item.price * item.qty).toFixed(2)}
+                </span>
               </div>
             </div>
-          </td>
-          <td>
-            <select class="inline-select" onchange="adminUpdateRdStage('${p.id}', this.value)">
-              ${['Stocked Inventory', 'Production Batch #1', 'Post-Cure QC', 'Prototype Mold Testing', 'Silicone Pour Scheduled'].map(stage =>
-                `<option value="${stage}" ${p.rdStage === stage ? 'selected' : ''}>${stage}</option>`
-              ).join('')}
-            </select>
-          </td>
-          <td>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <button class="mini-btn" onclick="adminAdjustStock('${p.id}', -5)">-5</button>
-              <button class="mini-btn" onclick="adminAdjustStock('${p.id}', -1)">-1</button>
-              <input type="number" class="inline-input" value="${p.stock}" onchange="adminSetStock('${p.id}', this.value)" />
-              <button class="mini-btn" onclick="adminAdjustStock('${p.id}', 1)">+1</button>
-              <button class="mini-btn" onclick="adminAdjustStock('${p.id}', 10)">+10</button>
-            </div>
-          </td>
-          <td>
-            <span class="stock-pill ${p.stock === 0 ? 'out' : (isLow ? 'low' : '')}" style="position:static;">
-              ${p.stock === 0 ? 'OUT OF STOCK' : (isLow ? `LOW (Min ${p.reorderPoint})` : 'HEALTHY')}
-            </span>
-          </td>
-          <td>
-            $<input type="number" step="0.50" class="inline-input" value="${Number(p.price).toFixed(2)}" onchange="adminSetPrice('${p.id}', this.value)" />
-          </td>
-          <td>$${Number(p.cost).toFixed(2)}</td>
-          <td><strong>$${(p.stock * p.price).toFixed(2)}</strong></td>
-        </tr>
-      `;
-    }).join('');
-
-    if (ordersTbody) {
-      ordersTbody.innerHTML = (db.orders || []).map(o => `
-        <tr>
-          <td><strong>${o.orderId}</strong></td>
-          <td>${o.customer}<br><small style="color:var(--mocha)">${o.email}</small></td>
-          <td>${new Date(o.date).toLocaleString()}</td>
-          <td>${o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</td>
-          <td><strong>$${Number(o.total).toFixed(2)}</strong></td>
-          <td>
-            <select class="inline-select" onchange="adminUpdateOrderStatus('${o.orderId}', this.value)">
-              ${['Processing', 'Packed in Cozy Box', 'Fulfilled', 'Delivered'].map(st =>
-                `<option value="${st}" ${o.status === st ? 'selected' : ''}>${st}</option>`
-              ).join('')}
-            </select>
-          </td>
-        </tr>
-      `).join('');
+            <button class="cart-item-remove" onclick="removeFromCart('${item.id}')" title="Remove item" aria-label="Remove item">
+              &times;
+            </button>
+          </div>
+        `).join('');
+      }
     }
 
-    if (logList) {
-      logList.innerHTML = (db.activityLog || []).slice(0, 12).map(l => `
-        <div style="padding:10px 14px; border-bottom:1px solid var(--oatmeal); display:flex; justify-content:space-between; gap:16px; font-size:0.85rem;">
-          <span><strong>[${l.actor}]</strong> ${l.action}</span>
-          <span style="color:var(--mocha); white-space:nowrap;">${new Date(l.timestamp).toLocaleTimeString()}</span>
-        </div>
-      `).join('');
+    // Calculate Financials
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const isDiscordVIP = (appliedPromo === 'DISCORD25');
+    const discountAmount = isDiscordVIP ? (subtotal * 0.25) : 0;
+    const shippingAmount = (subtotal === 0) ? 0 : ((subtotal >= 50) ? 0 : 4.99);
+    const grandTotal = Math.max(0, subtotal - discountAmount + shippingAmount);
+
+    // Update Drawer Financial Elements
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const discountRow = document.getElementById('cart-discount-row');
+    const discountEl = document.getElementById('cart-discount');
+    const shippingEl = document.getElementById('cart-shipping');
+    const grandTotalEl = document.getElementById('cart-grand-total');
+    const promoTag = document.getElementById('applied-promo-tag');
+
+    if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+
+    if (discountRow && discountEl) {
+      if (discountAmount > 0) {
+        discountRow.style.display = 'flex';
+        discountEl.textContent = `-$${discountAmount.toFixed(2)}`;
+      } else {
+        discountRow.style.display = 'none';
+      }
+    }
+
+    if (shippingEl) {
+      if (subtotal === 0) {
+        shippingEl.textContent = '$0.00';
+      } else if (subtotal >= 50) {
+        shippingEl.textContent = 'FREE (Orders $50+)';
+      } else {
+        shippingEl.textContent = `$${shippingAmount.toFixed(2)}`;
+      }
+    }
+
+    if (grandTotalEl) grandTotalEl.textContent = `$${grandTotal.toFixed(2)}`;
+
+    if (promoTag) {
+      promoTag.style.display = isDiscordVIP ? 'flex' : 'none';
     }
   }
 
-  // Admin Actions
-  window.adminAdjustStock = async function (productId, delta) {
-    const p = db.products.find(item => item.id === productId);
-    if (!p) return;
-    const oldStock = p.stock;
-    p.stock = Math.max(0, p.stock + delta);
-    await persistDatabase(`Adjusted stock for ${p.sku} (${p.name}): ${oldStock} -> ${p.stock}`);
-    showToast(`${p.sku} stock updated to ${p.stock}`);
+  // Promo Code Operations
+  window.applyPromoCode = function (explicitCode) {
+    const input = document.getElementById('promo-code-input');
+    const rawCode = explicitCode || (input ? input.value : '');
+    const code = (rawCode || '').trim().toUpperCase();
+
+    if (!code) {
+      showToast('Please enter a promotional code.');
+      return;
+    }
+
+    if (code === 'DISCORD25') {
+      appliedPromo = 'DISCORD25';
+      localStorage.setItem('dabnaps_promo', 'DISCORD25');
+      if (input) input.value = '';
+      updateCartUI();
+      showToast('🎉 VIP 25% member discount activated!');
+    } else {
+      showToast('Invalid or expired promo code.');
+    }
   };
 
-  window.adminSetStock = async function (productId, val) {
-    const p = db.products.find(item => item.id === productId);
-    if (!p) return;
-    const oldStock = p.stock;
-    p.stock = Math.max(0, parseInt(val, 10) || 0);
-    await persistDatabase(`Set stock for ${p.sku} (${p.name}): ${oldStock} -> ${p.stock}`);
-    showToast(`${p.sku} stock set to ${p.stock}`);
+  window.removePromoCode = function () {
+    appliedPromo = null;
+    localStorage.removeItem('dabnaps_promo');
+    updateCartUI();
+    showToast('Promo code removed.');
   };
 
-  window.adminSetPrice = async function (productId, val) {
-    const p = db.products.find(item => item.id === productId);
-    if (!p) return;
-    const oldPrice = p.price;
-    p.price = Math.max(0, parseFloat(val) || 0);
-    await persistDatabase(`Updated retail price for ${p.sku}: $${oldPrice.toFixed(2)} -> $${p.price.toFixed(2)}`);
-    showToast(`${p.sku} price updated to $${p.price.toFixed(2)}`);
+  // Checkout Modal
+  window.openCheckoutModal = function () {
+    if (cart.length === 0) {
+      showToast('Your Cloud Bag is empty.');
+      return;
+    }
+
+    toggleCartDrawer(false);
+
+    // Populate Checkout Review Box
+    const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const isDiscordVIP = (appliedPromo === 'DISCORD25');
+    const discountAmount = isDiscordVIP ? (subtotal * 0.25) : 0;
+    const shippingAmount = (subtotal >= 50) ? 0 : 4.99;
+    const grandTotal = Math.max(0, subtotal - discountAmount + shippingAmount);
+
+    const modalItemCount = document.getElementById('modal-item-count');
+    const modalSubtotal = document.getElementById('modal-subtotal');
+    const modalDiscountRow = document.getElementById('modal-discount-row');
+    const modalDiscount = document.getElementById('modal-discount');
+    const modalShipping = document.getElementById('modal-shipping');
+    const modalTotal = document.getElementById('modal-total');
+    const placeOrderAmount = document.getElementById('place-order-amount');
+
+    if (modalItemCount) modalItemCount.textContent = totalCount;
+    if (modalSubtotal) modalSubtotal.textContent = `$${subtotal.toFixed(2)}`;
+
+    if (modalDiscountRow && modalDiscount) {
+      if (discountAmount > 0) {
+        modalDiscountRow.style.display = 'flex';
+        modalDiscount.textContent = `-$${discountAmount.toFixed(2)}`;
+      } else {
+        modalDiscountRow.style.display = 'none';
+      }
+    }
+
+    if (modalShipping) {
+      modalShipping.textContent = (shippingAmount === 0) ? 'FREE' : `$${shippingAmount.toFixed(2)}`;
+    }
+
+    if (modalTotal) modalTotal.textContent = `$${grandTotal.toFixed(2)}`;
+    if (placeOrderAmount) placeOrderAmount.textContent = grandTotal.toFixed(2);
+
+    // Ensure form view is visible and confirmation view is hidden
+    const formContainer = document.getElementById('checkout-form-container');
+    const confirmContainer = document.getElementById('checkout-confirmation-container');
+    const modalTitle = document.getElementById('checkout-modal-title');
+    if (formContainer) formContainer.style.display = 'block';
+    if (confirmContainer) confirmContainer.style.display = 'none';
+    if (modalTitle) modalTitle.textContent = '📦 On-Demand Order Checkout';
+
+    const modal = document.getElementById('checkout-modal-backdrop');
+    if (modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
   };
 
-  window.adminUpdateRdStage = async function (productId, stage) {
-    const p = db.products.find(item => item.id === productId);
-    if (!p) return;
-    p.rdStage = stage;
-    await persistDatabase(`Updated R&D / Production Stage for ${p.sku} to "${stage}"`);
-    showToast(`${p.sku} stage set to ${stage}`);
+  window.closeCheckoutModal = function () {
+    const modal = document.getElementById('checkout-modal-backdrop');
+    if (modal) {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   };
 
-  window.adminUpdateOrderStatus = async function (orderId, status) {
-    const ord = (db.orders || []).find(o => o.orderId === orderId);
-    if (!ord) return;
-    ord.status = status;
-    await persistDatabase(`Order ${orderId} marked as "${status}"`);
-    showToast(`Order ${orderId} status: ${status}`);
+  window.handleCheckoutBackdropClick = function (e) {
+    if (e.target.id === 'checkout-modal-backdrop') {
+      closeCheckoutModal();
+    }
   };
 
-  window.openNewProductModal = function (open) {
-    document.getElementById('new-product-modal').classList.toggle('open', open);
-  };
-
-  window.createNewProduct = async function (e) {
+  // Submit Order & Manage Simulated Inventory
+  window.handleCheckoutSubmit = function (e) {
     e.preventDefault();
-    const sku = document.getElementById('np-sku').value.trim().toUpperCase();
-    const name = document.getElementById('np-name').value.trim();
-    const category = document.getElementById('np-category').value;
-    const price = parseFloat(document.getElementById('np-price').value) || 35;
-    const cost = parseFloat(document.getElementById('np-cost').value) || 10;
-    const stock = parseInt(document.getElementById('np-stock').value, 10) || 20;
-    const colorway = document.getElementById('np-colorway').value.trim() || 'Cozy Cream & Sage';
-    const desc = document.getElementById('np-desc').value.trim() || 'Crafted for the Dabnaps Cloud Lounge.';
 
-    if (!sku || !name) return;
+    const name = (document.getElementById('ship-name') || {}).value || 'Customer';
+    const email = (document.getElementById('ship-email') || {}).value || 'buyer@example.com';
+    const address = (document.getElementById('ship-address') || {}).value || '123 Cloud St';
+    const city = (document.getElementById('ship-city') || {}).value || 'Denver';
+    const state = (document.getElementById('ship-state') || {}).value || 'CO';
+    const zip = (document.getElementById('ship-zip') || {}).value || '80202';
 
-    const imageMap = {
-      'Silicone Trays': 'assets/images/silicone-tray.png',
-      'Dab Rigs': 'assets/images/dab-rig.png',
-      'Apparel': 'assets/images/tshirt.png',
-      'Blankets': 'assets/images/fluffy-blanket.png',
-      'Bundles': 'assets/images/fluffy-blanket.png'
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const isDiscordVIP = (appliedPromo === 'DISCORD25');
+    const discountAmount = isDiscordVIP ? (subtotal * 0.25) : 0;
+    const shippingAmount = (subtotal >= 50) ? 0 : 4.99;
+    const grandTotal = Math.max(0, subtotal - discountAmount + shippingAmount);
+
+    const orderId = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
+
+    // Decrement Simulated Inventory in db.products
+    cart.forEach(cartItem => {
+      const product = db.products.find(p => p.id === cartItem.id);
+      if (product) {
+        product.stock = Math.max(0, product.stock - cartItem.qty);
+      }
+    });
+
+    // Record Order in Database
+    const newOrder = {
+      orderId: orderId,
+      timestamp: new Date().toISOString(),
+      customer: {
+        name: name,
+        email: email,
+        address: address,
+        city: city,
+        state: state,
+        zip: zip
+      },
+      items: JSON.parse(JSON.stringify(cart)),
+      subtotal: subtotal,
+      discount: discountAmount,
+      promoCode: appliedPromo,
+      shipping: shippingAmount,
+      total: grandTotal,
+      fulfillmentStatus: 'Routed to On-Demand Supplier'
     };
 
-    const newProd = {
-      id: 'dn-' + Date.now().toString().slice(-5),
-      sku,
-      name,
-      category,
-      price,
-      cost,
-      stock,
-      reorderPoint: 10,
-      inHouse: category === 'Silicone Trays',
-      rdStage: category === 'Silicone Trays' ? 'Production Batch #1' : 'Stocked Inventory',
-      moldId: 'CUSTOM-MOLD',
-      curingSpec: 'Platinum Standard',
-      colorway,
-      image: imageMap[category] || 'assets/images/silicone-tray.png',
-      badge: 'New Drop',
-      featured: true,
-      description: desc,
-      specs: [
-        `Colorway: ${colorway}`,
-        'Designed in-house by Dabnaps',
-        'Cozy Cloud Guarantee'
-      ]
-    };
+    if (!db.orders) db.orders = [];
+    db.orders.push(newOrder);
 
-    db.products.unshift(newProd);
-    openNewProductModal(false);
-    e.target.reset();
-    await persistDatabase(`Created new SKU ${sku} (${name}) at $${price.toFixed(2)} with ${stock} initial units.`);
-    showToast(`Added ${name} (${sku}) to catalog!`);
+    // Persist Updated Inventory & Orders to Local Storage Override
+    localStorage.setItem('dabnaps_db_override', JSON.stringify(db));
+
+    // Clear Cart & Promo
+    cart = [];
+    appliedPromo = null;
+    localStorage.removeItem('dabnaps_promo');
+    saveCartToStorage();
+    updateCartUI();
+
+    // Render Confirmation View
+    const formContainer = document.getElementById('checkout-form-container');
+    const confirmContainer = document.getElementById('checkout-confirmation-container');
+    const modalTitle = document.getElementById('checkout-modal-title');
+    const confirmedOrderId = document.getElementById('confirmed-order-id');
+    const confirmedRecipient = document.getElementById('confirmed-recipient');
+    const confirmedAddress = document.getElementById('confirmed-address');
+    const confirmedTotal = document.getElementById('confirmed-total');
+
+    if (formContainer) formContainer.style.display = 'none';
+    if (confirmContainer) confirmContainer.style.display = 'block';
+    if (modalTitle) modalTitle.textContent = '🎉 Order Confirmation';
+    if (confirmedOrderId) confirmedOrderId.textContent = orderId;
+    if (confirmedRecipient) confirmedRecipient.textContent = `${name} (${email})`;
+    if (confirmedAddress) confirmedAddress.textContent = `${address}, ${city}, ${state} ${zip}`;
+    if (confirmedTotal) confirmedTotal.textContent = `$${grandTotal.toFixed(2)}`;
+
+    // Re-render Storefront so stock badges immediately reflect decremented inventory
+    renderStorefront();
+
+    showToast(`Order ${orderId} placed successfully!`);
   };
 
-  window.exportInventoryJson = function () {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-    const dlAnchor = document.createElement('a');
-    dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", "inventory.json");
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
-    showToast('Downloaded updated inventory.json');
-  };
-
-  function setupEventListeners() {
-    const searchInput = document.getElementById('catalog-search');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        renderStorefront();
-      });
+  // Age Gate (21+)
+  window.checkAgeGate = function () {
+    const verified = localStorage.getItem('dabnaps_age_verified');
+    const modal = document.getElementById('age-gate-modal');
+    if (!verified && modal) {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
     }
-  }
+  };
 
-  function showToast(msg) {
-    const t = document.getElementById('toast-notification');
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(window._toastTimer);
-    window._toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
-  }
+  window.confirmAgeGate = function (isOfAge) {
+    const modal = document.getElementById('age-gate-modal');
+    if (isOfAge) {
+      localStorage.setItem('dabnaps_age_verified', 'true');
+      if (modal) modal.classList.remove('open');
+      document.body.style.overflow = '';
+      showToast('Welcome to Dabnaps — Golden Hour Concentrates Comfort.');
+    } else {
+      window.location.href = 'https://www.google.com';
+    }
+  };
 
-  document.addEventListener('DOMContentLoaded', init);
+  // Toast Notification Helper
+  window.showToast = function (msg) {
+    const toast = document.getElementById('toast-notification');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3400);
+  };
+
+  // Bootstrap on DOM Ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
-
